@@ -113,3 +113,8 @@ export function orderUpdate(orderId: string, body: OrderUpdatePayload) {
     body: JSON.stringify(body),
   });
 }
+
+/** Скачать бланк заказа (xlsx из шаблона). Только ADMIN/WORKER — см. API. */
+export function orderPrintXlsxPath(orderId: string) {
+  return `/api/orders/${orderId}/print.xlsx`;
+}

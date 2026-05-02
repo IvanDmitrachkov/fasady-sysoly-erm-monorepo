@@ -21,7 +21,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { coatingTypesList, handleTypesList, millingTypesList } from "../api/facade-types";
-import { orderGet, orderMove, orderUpdate, type OrderUpdatePayload } from "../api/orders";
+import { orderGet, orderMove, orderPrintXlsxPath, orderUpdate, type OrderUpdatePayload } from "../api/orders";
+import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
@@ -204,16 +205,33 @@ export function OrderDetailPage() {
             Канбан
           </Button>
           {canEdit ? (
-            <Button
-              component={Link}
-              to={`/orders/${orderId}/cutting`}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="light"
-              size="sm"
-            >
-              Раскрой
-            </Button>
+            <>
+              <Button
+                component={Link}
+                to={`/orders/${orderId}/cutting`}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="light"
+                size="sm"
+              >
+                Раскрой
+              </Button>
+              <Button
+                variant="light"
+                size="sm"
+                onClick={async () => {
+                  const blob = await apiBlob(orderPrintXlsxPath(orderId!));
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `zakaz_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Печать заказа
+              </Button>
+            </>
           ) : null}
         </Group>
       </Group>

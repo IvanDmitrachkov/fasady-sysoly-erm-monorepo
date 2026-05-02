@@ -4,6 +4,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { cuttingPdfPath, cuttingPlanGet, type CuttingSheetDto } from "../api/cutting";
 import { apiBlob } from "../api/http";
+import { orderPrintXlsxPath } from "../api/orders";
 
 function SheetSvg({ sheet }: { sheet: CuttingSheetDto }) {
   const w = sheet.widthMm;
@@ -67,22 +68,38 @@ export function OrderCuttingPage() {
         <Button component={Link} to={`/orders/${orderId}`} variant="subtle">
           ← К заказу
         </Button>
-        <Button
-          variant="filled"
-          loading={plan.isFetching}
-          onClick={async () => {
-            const blob = await apiBlob(cuttingPdfPath(orderId));
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `raskroy_${plan.data?.orderNumberFormatted?.replace(/\s/g, "_") ?? orderId}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-          disabled={!plan.data}
-        >
-          Скачать PDF
-        </Button>
+        <Group gap="xs">
+          <Button
+            variant="filled"
+            loading={plan.isFetching}
+            onClick={async () => {
+              const blob = await apiBlob(cuttingPdfPath(orderId));
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `raskroy_${plan.data?.orderNumberFormatted?.replace(/\s/g, "_") ?? orderId}.pdf`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            disabled={!plan.data}
+          >
+            Скачать PDF
+          </Button>
+          <Button
+            variant="light"
+            onClick={async () => {
+              const blob = await apiBlob(orderPrintXlsxPath(orderId));
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `zakaz_${plan.data?.orderNumberFormatted?.replace(/\s/g, "_") ?? orderId}.xlsx`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Печать заказа
+          </Button>
+        </Group>
       </Group>
 
       <Title order={2} mb="xs">
