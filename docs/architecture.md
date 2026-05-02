@@ -1,5 +1,7 @@
 # ERM «Фасады Сысолы» — Архитектурные требования v1.0
 
+Структура репозитория, сборка и один **`server.js`** на Beget: [repository-and-production.md](./repository-and-production.md).
+
 ---
 
 # 1. 🧠 Общая архитектура системы
