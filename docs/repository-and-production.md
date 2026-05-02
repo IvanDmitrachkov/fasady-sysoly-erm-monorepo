@@ -1,6 +1,6 @@
 # ERM «Фасады Сысолы» — Структура репозитория и продакшен (Beget)
 
-Документ фиксирует **целевую** раскладку кода и способ выкладки на прод. Общий стек, JWT, `/admin` + `/api`, MySQL — см. [architecture.md](./architecture.md).
+Документ фиксирует **целевую** раскладку кода и способ выкладки на прод. Общий стек, JWT, `/admin` + `/api`, MySQL — см. [architecture.md](./architecture.md). Список библиотек и UI — [technology-stack-and-ui.md](./technology-stack-and-ui.md).
 
 ---
 

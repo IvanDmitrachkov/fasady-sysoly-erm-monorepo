@@ -2,6 +2,8 @@
 
 Структура репозитория, сборка и один **`server.js`** на Beget: [repository-and-production.md](./repository-and-production.md).
 
+Зафиксированный стек библиотек и UI (Mantine, Prisma, Zod и т.д.): [technology-stack-and-ui.md](./technology-stack-and-ui.md).
+
 ---
 
 # 1. 🧠 Общая архитектура системы
@@ -115,7 +117,7 @@
 - JSON обмен данными; для PDF раскроя — **бинарный ответ** (например `application/pdf`)
 
 ## 6.2 Backend → Database
-- SQL через ORM (Prisma или аналог)
+- SQL через **Prisma** (см. [technology-stack-and-ui.md](./technology-stack-and-ui.md))
 
 ## 6.3 Backend → File Storage
 - запись/чтение файлов из локальной FS
