@@ -30,7 +30,7 @@ fasady-sysoly-erm-2/
 │       └── package.json
 ├── packages/                   # опционально: shared типы/DTO между web и api
 │   └── shared/
-├── package.json                # workspaces (npm / pnpm / yarn)
+├── package.json                # Yarn workspaces (`"workspaces": ["apps/*"]`)
 └── .github/workflows/          # build → артефакт → deploy на Beget
 ```
 
@@ -101,4 +101,4 @@ fasady-sysoly-erm-2/
 
 ## 5. Что не фиксируем здесь
 
-Конкретный менеджер пакетов (npm/pnpm), инструмент сборки бэка (tsc / esbuild / tsup) и точное имя папки со статикой — выбираются при инициализации репозитория; смысл схемы остаётся: **один процесс, один entry, два префикса пути**.
+Инструмент сборки бэка (tsc / esbuild / tsup) и точное имя папки со статикой при необходимости уточняются в репозитории; смысл схемы остаётся: **один процесс, один entry, два префикса пути**.

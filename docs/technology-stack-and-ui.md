@@ -59,7 +59,7 @@
 
 | Назначение | Выбор |
 |------------|--------|
-| пакеты | **pnpm** workspaces (предпочтительно) или npm — зафиксировать при создании репо |
+| пакеты | **Yarn** workspaces (Classic `workspaces` в корневом `package.json`) |
 | форматирование | **Prettier** |
 | линт | **ESLint** + **typescript-eslint** |
 
