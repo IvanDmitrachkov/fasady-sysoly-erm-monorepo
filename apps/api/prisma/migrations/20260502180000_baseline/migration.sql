@@ -1,4 +1,5 @@
--- CreateTable
+-- Baseline: одна миграция со всей схемой (избегает пошаговых блокировок SQLite).
+
 CREATE TABLE "Customer" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -6,7 +7,6 @@ CREATE TABLE "Customer" (
     "updatedAt" DATETIME NOT NULL
 );
 
--- CreateTable
 CREATE TABLE "Stage" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "slug" TEXT NOT NULL,
@@ -17,7 +17,21 @@ CREATE TABLE "Stage" (
     "updatedAt" DATETIME NOT NULL
 );
 
--- CreateTable
+CREATE UNIQUE INDEX "Stage_slug_key" ON "Stage"("slug");
+
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "email" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "customerId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "User_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
 CREATE TABLE "Order" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "orderNumber" INTEGER NOT NULL,
@@ -34,7 +48,8 @@ CREATE TABLE "Order" (
     CONSTRAINT "Order_currentStageId_fkey" FOREIGN KEY ("currentStageId") REFERENCES "Stage" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- CreateTable
+CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");
+
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
@@ -46,28 +61,20 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_User" (
+CREATE TABLE "Facade" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "email" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
-    "role" TEXT NOT NULL,
-    "customerId" TEXT,
+    "orderId" TEXT NOT NULL,
+    "sortIndex" INTEGER NOT NULL DEFAULT 0,
+    "milling" TEXT NOT NULL DEFAULT '',
+    "coating" TEXT NOT NULL DEFAULT '',
+    "color" TEXT NOT NULL DEFAULT '',
+    "dimensionsMm" TEXT NOT NULL,
+    "thicknessMm" REAL NOT NULL,
+    "integratedHandle" BOOLEAN NOT NULL DEFAULT false,
+    "edgeRadius" REAL,
+    "optionsExtra" TEXT,
+    "basePrice" REAL NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "User_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "Facade_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-INSERT INTO "new_User" ("createdAt", "customerId", "email", "id", "passwordHash", "role", "updatedAt") SELECT "createdAt", "customerId", "email", "id", "passwordHash", "role", "updatedAt" FROM "User";
-DROP TABLE "User";
-ALTER TABLE "new_User" RENAME TO "User";
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
-
--- CreateIndex
-CREATE UNIQUE INDEX "Stage_slug_key" ON "Stage"("slug");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");

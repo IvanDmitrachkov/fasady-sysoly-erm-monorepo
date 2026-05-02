@@ -38,6 +38,16 @@ yarn dev
 
 Учётки после seed: `admin@example.com` / `Admin123!`, `worker@example.com` / `Worker123!`, `customer@example.com` / `Customer123!`.
 
+### Сброс локальной БД (удалит все dev-данные)
+
+Если после обновления схемы API отвечает 500 (`The table main.Facade does not exist` и т.п.), **остановите `yarn dev`** (и Prisma Studio, если открыт), затем:
+
+```bash
+yarn db:reset
+```
+
+Скрипт удаляет `apps/api/.data/dev.db*` и выполняет `prisma migrate deploy` + seed на **абсолютный** путь к этой БД (совпадает с тем, как API резолвит `file:./.data/...` от каталога пакета, а не от `process.cwd()`).
+
 ## Сборка
 
 ```bash

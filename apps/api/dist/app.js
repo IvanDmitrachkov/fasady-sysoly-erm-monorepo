@@ -6,6 +6,10 @@ import { prismaPlugin } from "./plugins/prisma.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { meRoutes } from "./routes/me.js";
+import { ordersRoutes } from "./routes/orders.js";
+import { stagesRoutes } from "./routes/stages.js";
+import { customersRoutes } from "./routes/customers.js";
+import { auditRoutes } from "./routes/audit.js";
 export async function buildApp(env) {
     const app = Fastify({ logger: true });
     await app.register(cors, {
@@ -22,6 +26,10 @@ export async function buildApp(env) {
     await app.register(healthRoutes, { prefix: "/api" });
     await app.register(authRoutes, { prefix: "/api" });
     await app.register(meRoutes, { prefix: "/api" });
+    await app.register(ordersRoutes, { prefix: "/api" });
+    await app.register(stagesRoutes, { prefix: "/api" });
+    await app.register(customersRoutes, { prefix: "/api" });
+    await app.register(auditRoutes, { prefix: "/api" });
     // Раздача SPA под /admin после сборки: см. copy-web.mjs и включите @fastify/static
     // (пути Vite `base: '/admin/'` нужно согласовать с prefix — добавим в следующей итерации)
     return app;

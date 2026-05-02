@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveSqliteDatabaseUrl } from "./lib/database-url.js";
 const envSchema = z.object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     DATABASE_URL: z.string().min(1),
@@ -8,6 +9,9 @@ const envSchema = z.object({
     WEB_DIST_PATH: z.string().optional(),
 });
 export function loadEnv() {
+    if (process.env.DATABASE_URL) {
+        process.env.DATABASE_URL = resolveSqliteDatabaseUrl(process.env.DATABASE_URL);
+    }
     const parsed = envSchema.safeParse(process.env);
     if (!parsed.success) {
         console.error("Invalid environment:", parsed.error.flatten().fieldErrors);

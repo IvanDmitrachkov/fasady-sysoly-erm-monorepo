@@ -19,7 +19,11 @@ export const authRoutes = async (app) => {
         if (!match) {
             return reply.code(401).send({ error: "Invalid email or password" });
         }
-        const token = await reply.jwtSign({ sub: user.id, role: user.role }, { sign: { expiresIn: "7d" } });
+        const token = await reply.jwtSign({
+            sub: user.id,
+            role: user.role,
+            customerId: user.customerId ?? null,
+        });
         return {
             token,
             user: {

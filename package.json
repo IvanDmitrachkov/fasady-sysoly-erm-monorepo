@@ -12,7 +12,8 @@
     "db:generate": "yarn workspace @erm/api db:generate",
     "db:migrate": "yarn workspace @erm/api db:migrate",
     "db:seed": "yarn workspace @erm/api db:seed",
-    "db:studio": "yarn workspace @erm/api db:studio"
+    "db:studio": "yarn workspace @erm/api db:studio",
+    "db:reset": "yarn workspace @erm/api db:reset"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

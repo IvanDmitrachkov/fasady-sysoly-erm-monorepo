@@ -1,0 +1,1 @@
+{"version":3,"file":"order-number.js","sourceRoot":"","sources":["../../src/lib/order-number.ts"],"names":[],"mappings":"AAAA,uEAAuE;AACvE,MAAM,UAAU,iBAAiB,CAAC,WAAmB;IACnD,IAAI,WAAW,GAAG,SAAS,EAAE,CAAC;QAC5B,OAAO,MAAM,CAAC,WAAW,CAAC,CAAC,QAAQ,CAAC,CAAC,EAAE,GAAG,CAAC,CAAC;IAC9C,CAAC;IACD,OAAO,MAAM,CAAC,WAAW,CAAC,CAAC;AAC7B,CAAC"}

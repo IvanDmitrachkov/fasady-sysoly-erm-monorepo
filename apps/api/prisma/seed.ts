@@ -1,6 +1,12 @@
+import "dotenv/config";
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { resolveSqliteDatabaseUrl } from "../src/lib/database-url.js";
 import { DEFAULT_STAGES } from "../src/lib/default-stages";
+
+if (process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = resolveSqliteDatabaseUrl(process.env.DATABASE_URL);
+}
 
 const prisma = new PrismaClient();
 

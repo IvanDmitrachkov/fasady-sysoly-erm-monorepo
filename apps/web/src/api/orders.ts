@@ -10,6 +10,20 @@ export type StageDto = {
 
 export type CustomerDto = { id: string; name: string };
 
+export type FacadeDto = {
+  id: string;
+  sortIndex: number;
+  milling: string;
+  coating: string;
+  color: string;
+  dimensionsMm: string;
+  thicknessMm: number;
+  integratedHandle: boolean;
+  edgeRadius: number | null;
+  optionsExtra: string | null;
+  basePrice: number;
+};
+
 export type OrderDto = {
   id: string;
   orderNumber: number;
@@ -22,6 +36,7 @@ export type OrderDto = {
   totalPrice: number | null;
   customer: CustomerDto;
   currentStage: StageDto;
+  facades: FacadeDto[];
 };
 
 export function ordersList() {
@@ -35,6 +50,19 @@ export function orderMove(orderId: string, stageId: string) {
   });
 }
 
+export type OrderCreateFacadePayload = {
+  sortIndex?: number;
+  milling: string;
+  coating: string;
+  color: string;
+  dimensionsMm: string;
+  thicknessMm: number;
+  integratedHandle?: boolean;
+  edgeRadius?: number | null;
+  optionsExtra?: string | null;
+  basePrice: number;
+};
+
 export function orderCreate(body: {
   customerId: string;
   deadlineAt?: string | null;
@@ -42,6 +70,7 @@ export function orderCreate(body: {
   overridePercent?: number | null;
   overridePrice?: number | null;
   totalPrice?: number | null;
+  facades: OrderCreateFacadePayload[];
 }) {
   return apiJson<{ order: OrderDto }>("/api/orders", {
     method: "POST",

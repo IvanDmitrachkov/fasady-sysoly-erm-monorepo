@@ -5,7 +5,24 @@ import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHa
 import { writeAudit } from "../lib/audit.js";
 import { formatOrderNumber } from "../lib/order-number.js";
 
-const orderInclude = { customer: true, currentStage: true } as const;
+const facadeItem = z.object({
+  sortIndex: z.number().int().optional(),
+  milling: z.string(),
+  coating: z.string(),
+  color: z.string(),
+  dimensionsMm: z.string().min(1),
+  thicknessMm: z.number(),
+  integratedHandle: z.boolean().optional(),
+  edgeRadius: z.number().nullable().optional(),
+  optionsExtra: z.string().nullable().optional(),
+  basePrice: z.number(),
+});
+
+const orderInclude = {
+  customer: true,
+  currentStage: true,
+  facades: { orderBy: { sortIndex: "asc" as const } },
+} as const;
 type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 
 const createOrderBody = z.object({
@@ -15,6 +32,7 @@ const createOrderBody = z.object({
   overridePercent: z.number().optional().nullable(),
   overridePrice: z.number().optional().nullable(),
   totalPrice: z.number().optional().nullable(),
+  facades: z.array(facadeItem).min(1, "Нужен хотя бы один фасад"),
 });
 
 const patchOrderBody = z.object({
@@ -24,6 +42,7 @@ const patchOrderBody = z.object({
   overridePercent: z.number().optional().nullable(),
   overridePrice: z.number().optional().nullable(),
   totalPrice: z.number().optional().nullable(),
+  facades: z.array(facadeItem).min(1).optional(),
 });
 
 const moveBody = z.object({ stageId: z.string().min(1) });
@@ -33,6 +52,22 @@ async function fetchOrder(prisma: PrismaClient, id: string): Promise<OrderWithRe
     where: { id },
     include: orderInclude,
   });
+}
+
+function serializeFacade(f: OrderWithRelations["facades"][number]) {
+  return {
+    id: f.id,
+    sortIndex: f.sortIndex,
+    milling: f.milling,
+    coating: f.coating,
+    color: f.color,
+    dimensionsMm: f.dimensionsMm,
+    thicknessMm: f.thicknessMm,
+    integratedHandle: f.integratedHandle,
+    edgeRadius: f.edgeRadius,
+    optionsExtra: f.optionsExtra,
+    basePrice: f.basePrice,
+  };
 }
 
 function serializeOrder(order: OrderWithRelations) {
@@ -48,6 +83,22 @@ function serializeOrder(order: OrderWithRelations) {
     totalPrice: order.totalPrice,
     customer: order.customer,
     currentStage: order.currentStage,
+    facades: order.facades.map(serializeFacade),
+  };
+}
+
+function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
+  return {
+    sortIndex: f.sortIndex ?? index,
+    milling: f.milling,
+    coating: f.coating,
+    color: f.color,
+    dimensionsMm: f.dimensionsMm,
+    thicknessMm: f.thicknessMm,
+    integratedHandle: f.integratedHandle ?? false,
+    edgeRadius: f.edgeRadius ?? null,
+    optionsExtra: f.optionsExtra ?? null,
+    basePrice: f.basePrice,
   };
 }
 
@@ -116,6 +167,9 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
           overridePercent: parsed.data.overridePercent ?? null,
           overridePrice: parsed.data.overridePrice ?? null,
           totalPrice: parsed.data.totalPrice ?? null,
+          facades: {
+            create: parsed.data.facades.map(mapFacadeCreate),
+          },
         },
         include: orderInclude,
       });
@@ -125,7 +179,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         app.prisma,
         uid,
         "order.create",
-        `Создан заказ №${formatOrderNumber(order.orderNumber)} для «${customer.name}»`,
+        `Создан заказ №${formatOrderNumber(order.orderNumber)} для «${customer.name}» (${order.facades.length} поз.)`,
         "Order",
         order.id,
       );
@@ -156,7 +210,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const data: Record<string, unknown> = {};
+      const data: Prisma.OrderUncheckedUpdateInput = {};
       if (parsed.data.customerId !== undefined) data.customerId = parsed.data.customerId;
       if (parsed.data.deadlineAt !== undefined) {
         data.deadlineAt = parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null;
@@ -166,11 +220,24 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (parsed.data.overridePrice !== undefined) data.overridePrice = parsed.data.overridePrice;
       if (parsed.data.totalPrice !== undefined) data.totalPrice = parsed.data.totalPrice;
 
-      const order = await app.prisma.order.update({
-        where: { id },
-        data,
-        include: orderInclude,
-      });
+      const order =
+        parsed.data.facades !== undefined
+          ? await app.prisma.$transaction(async (tx) => {
+              await tx.facade.deleteMany({ where: { orderId: id } });
+              return tx.order.update({
+                where: { id },
+                data: {
+                  ...data,
+                  facades: { create: parsed.data.facades!.map(mapFacadeCreate) },
+                },
+                include: orderInclude,
+              });
+            })
+          : await app.prisma.order.update({
+              where: { id },
+              data,
+              include: orderInclude,
+            });
 
       const uid = authUserId(request);
       await writeAudit(
