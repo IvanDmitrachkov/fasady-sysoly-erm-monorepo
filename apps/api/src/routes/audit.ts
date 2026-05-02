@@ -25,7 +25,18 @@ export const auditRoutes: FastifyPluginAsync = async (app) => {
           take,
           skip,
           orderBy: { createdAt: "desc" },
-          include: { user: { select: { id: true, email: true, role: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                patronymic: true,
+                role: true,
+              },
+            },
+          },
         }),
         app.prisma.auditLog.count(),
       ]);

@@ -5,6 +5,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { meRequest } from "../api/auth";
+import { userDisplayName } from "../lib/user-display-name";
 import { ACCESS_TOKEN_KEY, ApiError } from "../api/http";
 
 export function DashboardPage() {
@@ -40,7 +41,7 @@ export function DashboardPage() {
           {user ? (
             <Group gap="sm">
               <Text size="sm" c="dimmed">
-                {user.email} · {user.role}
+                {userDisplayName(user)} · {user.role}
               </Text>
               <Button
                 size="xs"

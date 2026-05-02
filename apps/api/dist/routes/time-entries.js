@@ -34,7 +34,13 @@ export const timeEntriesRoutes = async (app) => {
                 comment: e.comment,
                 workedAt: e.workedAt.toISOString(),
                 createdAt: e.createdAt.toISOString(),
-                user: { id: e.user.id, email: e.user.email },
+                user: {
+                    id: e.user.id,
+                    email: e.user.email,
+                    firstName: e.user.firstName,
+                    lastName: e.user.lastName,
+                    patronymic: e.user.patronymic,
+                },
                 stage: { id: e.stage.id, name: e.stage.name },
             })),
         };
@@ -73,7 +79,13 @@ export const timeEntriesRoutes = async (app) => {
                 comment: entry.comment,
                 workedAt: entry.workedAt.toISOString(),
                 createdAt: entry.createdAt.toISOString(),
-                user: { id: entry.user.id, email: entry.user.email },
+                user: {
+                    id: entry.user.id,
+                    email: entry.user.email,
+                    firstName: entry.user.firstName,
+                    lastName: entry.user.lastName,
+                    patronymic: entry.user.patronymic,
+                },
                 stage: { id: entry.stage.id, name: entry.stage.name },
             },
         });

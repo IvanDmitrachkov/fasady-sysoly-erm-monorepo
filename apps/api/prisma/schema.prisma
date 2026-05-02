@@ -25,6 +25,12 @@ model Customer {
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
+  /** Имя (необязательно) */
+  firstName    String?
+  /** Фамилия (необязательно) */
+  lastName     String?
+  /** Отчество (необязательно) */
+  patronymic   String?
   passwordHash String
   role         Role
   customerId   String?

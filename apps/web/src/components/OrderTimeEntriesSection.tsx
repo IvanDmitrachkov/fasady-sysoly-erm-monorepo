@@ -6,6 +6,7 @@ import { DatePickerInput } from "@mantine/dates";
 import { z } from "zod";
 import dayjs from "dayjs";
 import { timeEntriesList, timeEntryCreate } from "../api/time-entries";
+import { userDisplayName } from "../lib/user-display-name";
 import { stagesList } from "../api/stages";
 
 const formSchema = z.object({
@@ -103,7 +104,7 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
                   <Table.Td>{e.stage.name}</Table.Td>
                   <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
                   <Table.Td>
-                    <Text size="sm">{e.user.email}</Text>
+                    <Text size="sm">{userDisplayName(e.user)}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" lineClamp={2}>

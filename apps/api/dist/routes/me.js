@@ -9,7 +9,16 @@ export const meRoutes = async (app) => {
         const payload = request.user;
         const user = await app.prisma.user.findUnique({
             where: { id: payload.sub },
-            select: { id: true, email: true, role: true, customerId: true, createdAt: true },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                patronymic: true,
+                role: true,
+                customerId: true,
+                createdAt: true,
+            },
         });
         if (!user) {
             return reply.code(401).send({ error: "Unauthorized" });

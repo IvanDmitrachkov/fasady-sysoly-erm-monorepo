@@ -5,6 +5,9 @@ export type Role = "ADMIN" | "WORKER" | "CUSTOMER";
 export type UserDto = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
+  patronymic: string | null;
   role: Role;
   customerId: string | null;
 };

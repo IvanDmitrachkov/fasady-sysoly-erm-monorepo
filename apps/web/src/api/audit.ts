@@ -7,7 +7,14 @@ export type AuditItemDto = {
   entityType: string | null;
   entityId: string | null;
   createdAt: string;
-  user: { id: string; email: string; role: string };
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    patronymic: string | null;
+    role: string;
+  };
 };
 
 export function auditList(params?: { take?: number; skip?: number }) {

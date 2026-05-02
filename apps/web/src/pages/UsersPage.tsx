@@ -19,6 +19,7 @@ import { z } from "zod";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { userCreate, userDelete, userUpdate, usersList, type UserListDto, type UserRole } from "../api/users";
+import { userDisplayName, userHasDisplayName } from "../lib/user-display-name";
 
 const roleOptions: { value: UserRole; label: string }[] = [
   { value: "ADMIN", label: "Администратор" },
@@ -34,6 +35,9 @@ const createSchema = z
   .object({
     email: z.string().email("Некорректный email"),
     password: z.string().min(8, "Не короче 8 символов"),
+    firstName: z.string().max(120).optional(),
+    lastName: z.string().max(120).optional(),
+    patronymic: z.string().max(120).optional(),
     role: z.enum(["ADMIN", "WORKER", "CUSTOMER"]),
     customerId: z.string().nullable().optional(),
   })
@@ -53,6 +57,9 @@ const editSchema = z
   .object({
     email: z.string().email("Некорректный email"),
     password: z.string().optional(),
+    firstName: z.string().max(120).optional(),
+    lastName: z.string().max(120).optional(),
+    patronymic: z.string().max(120).optional(),
     role: z.enum(["ADMIN", "WORKER", "CUSTOMER"]),
     customerId: z.string().nullable().optional(),
   })
@@ -103,6 +110,9 @@ export function UsersPage() {
     defaultValues: {
       email: "",
       password: "",
+      firstName: "",
+      lastName: "",
+      patronymic: "",
       role: "WORKER",
       customerId: null,
     },
@@ -120,6 +130,9 @@ export function UsersPage() {
     defaultValues: {
       email: "",
       password: "",
+      firstName: "",
+      lastName: "",
+      patronymic: "",
       role: "WORKER",
       customerId: null,
     },
@@ -137,6 +150,9 @@ export function UsersPage() {
       editForm.reset({
         email: editUser.email,
         password: "",
+        firstName: editUser.firstName ?? "",
+        lastName: editUser.lastName ?? "",
+        patronymic: editUser.patronymic ?? "",
         role: editUser.role,
         customerId: editUser.customerId,
       });
@@ -148,7 +164,15 @@ export function UsersPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["users"] });
       setCreateOpen(false);
-      createForm.reset({ email: "", password: "", role: "WORKER", customerId: null });
+      createForm.reset({
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+        patronymic: "",
+        role: "WORKER",
+        customerId: null,
+      });
     },
   });
 
@@ -197,7 +221,7 @@ export function UsersPage() {
         <Table striped withTableBorder>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Email</Table.Th>
+              <Table.Th>Пользователь</Table.Th>
               <Table.Th>Роль</Table.Th>
               <Table.Th>Организация</Table.Th>
               <Table.Th style={{ width: 200 }} />
@@ -206,7 +230,16 @@ export function UsersPage() {
           <Table.Tbody>
             {users.data.users.map((u) => (
               <Table.Tr key={u.id}>
-                <Table.Td>{u.email}</Table.Td>
+                <Table.Td>
+                  <Stack gap={0}>
+                    <Text size="sm">{userDisplayName(u)}</Text>
+                    {userHasDisplayName(u) ? (
+                      <Text size="xs" c="dimmed">
+                        {u.email}
+                      </Text>
+                    ) : null}
+                  </Stack>
+                </Table.Td>
                 <Table.Td>{roleLabel(u.role)}</Table.Td>
                 <Table.Td>{u.customer?.name ?? "—"}</Table.Td>
                 <Table.Td>
@@ -239,11 +272,21 @@ export function UsersPage() {
               password: v.password,
               role: v.role,
               customerId: v.role === "CUSTOMER" ? v.customerId! : null,
+              firstName: v.firstName?.trim() || null,
+              lastName: v.lastName?.trim() || null,
+              patronymic: v.patronymic?.trim() || null,
             }),
           )}
         >
           <Stack>
             <TextInput label="Email" {...createForm.register("email")} error={createForm.formState.errors.email?.message} />
+            <TextInput label="Имя" {...createForm.register("firstName")} error={createForm.formState.errors.firstName?.message} />
+            <TextInput label="Фамилия" {...createForm.register("lastName")} error={createForm.formState.errors.lastName?.message} />
+            <TextInput
+              label="Отчество"
+              {...createForm.register("patronymic")}
+              error={createForm.formState.errors.patronymic?.message}
+            />
             <PasswordInput
               label="Пароль"
               {...createForm.register("password")}
@@ -298,6 +341,9 @@ export function UsersPage() {
               email: v.email.trim(),
               role: v.role,
               customerId: v.role === "CUSTOMER" ? v.customerId! : null,
+              firstName: v.firstName?.trim() || null,
+              lastName: v.lastName?.trim() || null,
+              patronymic: v.patronymic?.trim() || null,
             };
             if (v.password?.trim()) {
               body.password = v.password;
@@ -307,6 +353,13 @@ export function UsersPage() {
         >
           <Stack>
             <TextInput label="Email" {...editForm.register("email")} error={editForm.formState.errors.email?.message} />
+            <TextInput label="Имя" {...editForm.register("firstName")} error={editForm.formState.errors.firstName?.message} />
+            <TextInput label="Фамилия" {...editForm.register("lastName")} error={editForm.formState.errors.lastName?.message} />
+            <TextInput
+              label="Отчество"
+              {...editForm.register("patronymic")}
+              error={editForm.formState.errors.patronymic?.message}
+            />
             <PasswordInput
               label="Новый пароль"
               description="Оставьте пустым, чтобы не менять"
@@ -357,7 +410,16 @@ export function UsersPage() {
       <Modal opened={!!deleteUser} onClose={() => setDeleteUser(null)} title="Удалить пользователя?">
         <Stack>
           <Text size="sm">
-            Удалить <strong>{deleteUser?.email}</strong>? Действие необратимо.
+            Удалить пользователя <strong>{deleteUser ? userDisplayName(deleteUser) : ""}</strong>
+            {deleteUser && userHasDisplayName(deleteUser) ? (
+              <>
+                {" "}
+                <Text span c="dimmed" style={{ wordBreak: "break-all" }}>
+                  ({deleteUser.email})
+                </Text>
+              </>
+            ) : null}
+            ? Действие необратимо.
           </Text>
           {deleteMut.isError ? (
             <Text c="red" size="sm">

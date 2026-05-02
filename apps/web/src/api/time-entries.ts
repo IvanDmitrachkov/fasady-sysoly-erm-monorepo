@@ -6,7 +6,13 @@ export type TimeEntryDto = {
   comment: string | null;
   workedAt: string;
   createdAt: string;
-  user: { id: string; email: string };
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    patronymic: string | null;
+  };
   stage: { id: string; name: string };
 };
 

@@ -4,8 +4,11 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authUserId, requireJwt, requireRoles } from "../auth/preHandlers.js";
 import { writeAudit } from "../lib/audit.js";
+import { userDisplayName } from "../lib/user-display-name.js";
 
 const roleEnum = z.enum([Role.ADMIN, Role.WORKER, Role.CUSTOMER]);
+
+const optionalName = z.union([z.string().max(120), z.null()]).optional();
 
 const createUserBody = z
   .object({
@@ -13,6 +16,9 @@ const createUserBody = z
     password: z.string().min(8, "Пароль не короче 8 символов"),
     role: roleEnum,
     customerId: z.string().min(1).nullable().optional(),
+    firstName: optionalName,
+    lastName: optionalName,
+    patronymic: optionalName,
   })
   .superRefine((data, ctx) => {
     if (data.role === Role.CUSTOMER && !data.customerId) {
@@ -36,11 +42,23 @@ const patchUserBody = z.object({
   password: z.string().min(8).optional(),
   role: roleEnum.optional(),
   customerId: z.string().min(1).nullable().optional(),
+  firstName: optionalName,
+  lastName: optionalName,
+  patronymic: optionalName,
 });
+
+function normName(val: string | null | undefined): string | null {
+  if (val == null) return null;
+  const t = val.trim();
+  return t.length ? t : null;
+}
 
 function serializeUser(u: {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
+  patronymic: string | null;
   role: Role;
   customerId: string | null;
   customer: { id: string; name: string } | null;
@@ -48,6 +66,9 @@ function serializeUser(u: {
   return {
     id: u.id,
     email: u.email,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    patronymic: u.patronymic,
     role: u.role,
     customerId: u.customerId,
     customer: u.customer ? { id: u.customer.id, name: u.customer.name } : null,
@@ -89,6 +110,9 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
           passwordHash,
           role: parsed.data.role,
           customerId,
+          firstName: normName(parsed.data.firstName),
+          lastName: normName(parsed.data.lastName),
+          patronymic: normName(parsed.data.patronymic),
         },
         include: { customer: true },
       });
@@ -96,7 +120,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
         app.prisma,
         authUserId(request),
         "user.create",
-        `Создан пользователь ${user.email} (${user.role})`,
+        `Создан пользователь ${userDisplayName(user)} (${user.role})`,
         "User",
         user.id,
       );
@@ -159,6 +183,9 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       passwordHash?: string;
       role?: Role;
       customerId?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      patronymic?: string | null;
     } = {};
     if (parsed.data.email !== undefined) {
       data.email = parsed.data.email.toLowerCase().trim();
@@ -172,6 +199,15 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
     } else if (parsed.data.customerId !== undefined) {
       data.customerId = nextCustomerId;
     }
+    if (parsed.data.firstName !== undefined) {
+      data.firstName = normName(parsed.data.firstName);
+    }
+    if (parsed.data.lastName !== undefined) {
+      data.lastName = normName(parsed.data.lastName);
+    }
+    if (parsed.data.patronymic !== undefined) {
+      data.patronymic = normName(parsed.data.patronymic);
+    }
 
     try {
       const user = await app.prisma.user.update({
@@ -183,7 +219,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
         app.prisma,
         authUserId(request),
         "user.update",
-        `Изменён пользователь ${user.email}`,
+        `Изменён пользователь ${userDisplayName(user)}`,
         "User",
         user.id,
       );
@@ -219,7 +255,7 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
       app.prisma,
       authUserId(request),
       "user.delete",
-      `Удалён пользователь ${existing.email}`,
+      `Удалён пользователь ${userDisplayName(existing)}`,
       "User",
       id,
     );

@@ -32,8 +32,15 @@ async function main() {
       email: "admin@example.com",
       passwordHash,
       role: Role.ADMIN,
+      firstName: "Админ",
+      lastName: "Демо",
     },
-    update: { passwordHash, role: Role.ADMIN },
+    update: {
+      passwordHash,
+      role: Role.ADMIN,
+      firstName: "Админ",
+      lastName: "Демо",
+    },
   });
 
   const workerHash = await bcrypt.hash("Worker123!", 10);
@@ -43,8 +50,17 @@ async function main() {
       email: "worker@example.com",
       passwordHash: workerHash,
       role: Role.WORKER,
+      firstName: "Иван",
+      lastName: "Цехов",
+      patronymic: "Петрович",
     },
-    update: { passwordHash: workerHash, role: Role.WORKER },
+    update: {
+      passwordHash: workerHash,
+      role: Role.WORKER,
+      firstName: "Иван",
+      lastName: "Цехов",
+      patronymic: "Петрович",
+    },
   });
 
   const customerHash = await bcrypt.hash("Customer123!", 10);
@@ -55,11 +71,15 @@ async function main() {
       passwordHash: customerHash,
       role: Role.CUSTOMER,
       customerId: demoCustomer.id,
+      firstName: "Мария",
+      lastName: "Заказчикова",
     },
     update: {
       passwordHash: customerHash,
       role: Role.CUSTOMER,
       customerId: demoCustomer.id,
+      firstName: "Мария",
+      lastName: "Заказчикова",
     },
   });
 }

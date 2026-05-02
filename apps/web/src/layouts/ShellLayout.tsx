@@ -4,6 +4,7 @@ import { AppShell, Burger, Button, Group, NavLink, Text, Title } from "@mantine/
 import { useDisclosure } from "@mantine/hooks";
 import { NavLink as RouterNavLink, Outlet, useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
+import { userDisplayName } from "../lib/user-display-name";
 import { ACCESS_TOKEN_KEY, ApiError } from "../api/http";
 
 export function ShellLayout() {
@@ -40,7 +41,7 @@ export function ShellLayout() {
           {user ? (
             <Group gap="sm">
               <Text size="sm" c="dimmed">
-                {user.email} · {user.role}
+                {userDisplayName(user)} · {user.role}
               </Text>
               <Button
                 size="xs"

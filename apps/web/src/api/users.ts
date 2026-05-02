@@ -5,6 +5,9 @@ export type UserRole = "ADMIN" | "WORKER" | "CUSTOMER";
 export type UserListDto = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
+  patronymic: string | null;
   role: UserRole;
   customerId: string | null;
   customer: { id: string; name: string } | null;
@@ -19,6 +22,9 @@ export function userCreate(body: {
   password: string;
   role: UserRole;
   customerId?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  patronymic?: string | null;
 }) {
   return apiJson<{ user: UserListDto }>("/api/users", {
     method: "POST",
@@ -28,7 +34,15 @@ export function userCreate(body: {
 
 export function userUpdate(
   id: string,
-  body: Partial<{ email: string; password: string; role: UserRole; customerId: string | null }>,
+  body: Partial<{
+    email: string;
+    password: string;
+    role: UserRole;
+    customerId: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    patronymic: string | null;
+  }>,
 ) {
   return apiJson<{ user: UserListDto }>(`/api/users/${id}`, {
     method: "PATCH",

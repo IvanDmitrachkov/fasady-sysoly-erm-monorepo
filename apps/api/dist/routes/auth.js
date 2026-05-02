@@ -29,6 +29,9 @@ export const authRoutes = async (app) => {
             user: {
                 id: user.id,
                 email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                patronymic: user.patronymic,
                 role: user.role,
                 customerId: user.customerId,
             },
