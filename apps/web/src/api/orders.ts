@@ -77,3 +77,24 @@ export function orderCreate(body: {
     body: JSON.stringify(body),
   });
 }
+
+export function orderGet(orderId: string) {
+  return apiJson<{ order: OrderDto }>(`/api/orders/${orderId}`);
+}
+
+export type OrderUpdatePayload = {
+  customerId?: string;
+  deadlineAt?: string | null;
+  comment?: string | null;
+  overridePercent?: number | null;
+  overridePrice?: number | null;
+  totalPrice?: number | null;
+  facades?: OrderCreateFacadePayload[];
+};
+
+export function orderUpdate(orderId: string, body: OrderUpdatePayload) {
+  return apiJson<{ order: OrderDto }>(`/api/orders/${orderId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}

@@ -3,6 +3,9 @@ import { ShellLayout } from "./layouts/ShellLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardHome } from "./pages/DashboardHome";
 import { OrdersPage } from "./pages/OrdersPage";
+import { OrdersBoardPage } from "./pages/OrdersBoardPage";
+import { OrderDetailPage } from "./pages/OrderDetailPage";
+import { StagesPage } from "./pages/StagesPage";
 import { AuditPage } from "./pages/AuditPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { ACCESS_TOKEN_KEY } from "./api/http";
@@ -26,7 +29,10 @@ export const router = createBrowserRouter(
           element: <ShellLayout />,
           children: [
             { index: true, element: <DashboardHome /> },
+            { path: "orders/board", element: <OrdersBoardPage /> },
+            { path: "orders/:orderId", element: <OrderDetailPage /> },
             { path: "orders", element: <OrdersPage /> },
+            { path: "stages", element: <StagesPage /> },
             { path: "customers", element: <CustomersPage /> },
             { path: "audit", element: <AuditPage /> },
           ],

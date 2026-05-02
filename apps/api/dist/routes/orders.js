@@ -200,7 +200,10 @@ export const ordersRoutes = async (app) => {
                 include: orderInclude,
             });
         const uid = authUserId(request);
-        await writeAudit(app.prisma, uid, "order.update", `Обновлён заказ №${formatOrderNumber(order.orderNumber)}`, "Order", order.id);
+        const auditExtra = parsed.data.facades !== undefined
+            ? ` (${parsed.data.facades.length} поз., сумма ${parsed.data.totalPrice ?? "—"})`
+            : "";
+        await writeAudit(app.prisma, uid, "order.update", `Обновлён заказ №${formatOrderNumber(order.orderNumber)}${auditExtra}`, "Order", order.id);
         return { order: serializeOrder(order) };
     });
     app.post("/orders/:id/move", { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] }, async (request, reply) => {

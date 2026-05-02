@@ -240,11 +240,15 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
             });
 
       const uid = authUserId(request);
+      const auditExtra =
+        parsed.data.facades !== undefined
+          ? ` (${parsed.data.facades.length} поз., сумма ${parsed.data.totalPrice ?? "—"})`
+          : "";
       await writeAudit(
         app.prisma,
         uid,
         "order.update",
-        `Обновлён заказ №${formatOrderNumber(order.orderNumber)}`,
+        `Обновлён заказ №${formatOrderNumber(order.orderNumber)}${auditExtra}`,
         "Order",
         order.id,
       );
