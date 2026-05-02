@@ -62,6 +62,7 @@ export function ShellLayout() {
         <NavLink label="Заказы" component={RouterNavLink} to="/orders" />
         <NavLink label="Канбан" component={RouterNavLink} to="/orders/board" />
         {isAdmin ? <NavLink label="Этапы" component={RouterNavLink} to="/stages" /> : null}
+        {isAdmin ? <NavLink label="Пользователи" component={RouterNavLink} to="/users" /> : null}
         {isAdmin ? <NavLink label="Заказчики" component={RouterNavLink} to="/customers" /> : null}
         {isAdmin ? <NavLink label="Журнал (audit)" component={RouterNavLink} to="/audit" /> : null}
       </AppShell.Navbar>
