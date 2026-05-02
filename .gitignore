@@ -1,3 +1,7 @@
 .idea
 node_modules
 
+# локальная SQLite (путь см. docs/repository-and-production.md)
+.data/
+*.db
+*.db-journal

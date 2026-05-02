@@ -85,6 +85,9 @@
 ## 4.3 Доступ
 - только через backend (прямой доступ из frontend запрещён)
 
+## 4.4 Локальная разработка
+- для разработки на машине разработчика — **SQLite** (файл, не в git), чтобы не поднимать MySQL локально; подробности и оговорка про Prisma — в [repository-and-production.md](./repository-and-production.md) §3.1.
+
 ---
 
 # 5. 📁 File Storage
