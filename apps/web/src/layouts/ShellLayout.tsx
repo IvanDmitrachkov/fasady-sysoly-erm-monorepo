@@ -2,14 +2,28 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, Burger, Button, Group, NavLink, Text, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { NavLink as RouterNavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link as RouterLink, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { userDisplayName } from "../lib/user-display-name";
 import { ACCESS_TOKEN_KEY, ApiError } from "../api/http";
 
+/** Путь без префикса basename (`/admin`), как в маршрутизаторе. */
+function pathBelowAdmin(pathname: string): string {
+  const m = pathname.match(/^\/admin(\/.*)?$/);
+  if (m?.[1]) return m[1];
+  if (pathname === "/admin" || pathname === "/admin/") return "/";
+  return pathname;
+}
+
 export function ShellLayout() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [opened, { toggle }] = useDisclosure();
+
+  const rel = pathBelowAdmin(pathname);
+  const ordersNavActive =
+    rel === "/orders" || (rel.startsWith("/orders/") && !rel.startsWith("/orders/board"));
+  const kanbanNavActive = rel === "/orders/board";
 
   const me = useQuery({
     queryKey: ["me"],
@@ -60,8 +74,8 @@ export function ShellLayout() {
 
       <AppShell.Navbar p="md">
         <NavLink label="Главная" component={RouterNavLink} to="/" end />
-        <NavLink label="Заказы" component={RouterNavLink} to="/orders" />
-        <NavLink label="Канбан" component={RouterNavLink} to="/orders/board" />
+        <NavLink label="Заказы" component={RouterLink} to="/orders" active={ordersNavActive} />
+        <NavLink label="Канбан" component={RouterLink} to="/orders/board" active={kanbanNavActive} />
         {isAdmin ? <NavLink label="Этапы" component={RouterNavLink} to="/stages" /> : null}
         {isAdmin ? <NavLink label="Пользователи" component={RouterNavLink} to="/users" /> : null}
         {isAdmin ? <NavLink label="Заказчики" component={RouterNavLink} to="/customers" /> : null}
