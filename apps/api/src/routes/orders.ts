@@ -5,24 +5,47 @@ import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHa
 import { writeAudit } from "../lib/audit.js";
 import { formatOrderNumber } from "../lib/order-number.js";
 
-const facadeItem = z.object({
-  sortIndex: z.number().int().optional(),
-  milling: z.string(),
-  coating: z.string(),
-  color: z.string(),
-  widthMm: z.number().positive(),
-  heightMm: z.number().positive(),
-  thicknessMm: z.number(),
-  integratedHandle: z.boolean().optional(),
-  edgeRadius: z.number().nullable().optional(),
-  optionsExtra: z.string().nullable().optional(),
-  basePrice: z.number(),
-});
+const facadeItem = z
+  .object({
+    sortIndex: z.number().int().optional(),
+    millingTypeId: z.string().min(1),
+    coatingTypeId: z.string().min(1),
+    handleTypeId: z.string().min(1).nullable().optional(),
+    handleLengthMm: z.number().positive().nullable().optional(),
+    color: z.string(),
+    widthMm: z.number().positive(),
+    heightMm: z.number().positive(),
+    thicknessMm: z.number(),
+    edgeRadius: z.number().nullable().optional(),
+    optionsExtra: z.string().nullable().optional(),
+    basePrice: z.number(),
+  })
+  .superRefine((row, ctx) => {
+    const hid = row.handleTypeId ?? null;
+    if (hid) {
+      if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Укажите длину интегрированной ручки, мм",
+          path: ["handleLengthMm"],
+        });
+      }
+    } else if (row.handleLengthMm != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Длина ручки задаётся только при выбранном типе ручки",
+        path: ["handleLengthMm"],
+      });
+    }
+  });
 
 const orderInclude = {
   customer: true,
   currentStage: true,
-  facades: { orderBy: { sortIndex: "asc" as const } },
+  facades: {
+    orderBy: { sortIndex: "asc" as const },
+    include: { millingType: true, coatingType: true, handleType: true },
+  },
 } as const;
 type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 
@@ -59,13 +82,34 @@ function serializeFacade(f: OrderWithRelations["facades"][number]) {
   return {
     id: f.id,
     sortIndex: f.sortIndex,
-    milling: f.milling,
-    coating: f.coating,
+    millingTypeId: f.millingTypeId,
+    coatingTypeId: f.coatingTypeId,
+    handleTypeId: f.handleTypeId,
+    handleLengthMm: f.handleLengthMm,
+    millingType: {
+      id: f.millingType.id,
+      slug: f.millingType.slug,
+      name: f.millingType.name,
+      pricePerM2: f.millingType.pricePerM2,
+    },
+    coatingType: {
+      id: f.coatingType.id,
+      slug: f.coatingType.slug,
+      name: f.coatingType.name,
+      pricePerM2: f.coatingType.pricePerM2,
+    },
+    handleType: f.handleType
+      ? {
+          id: f.handleType.id,
+          slug: f.handleType.slug,
+          name: f.handleType.name,
+          pricePerMeter: f.handleType.pricePerMeter,
+        }
+      : null,
     color: f.color,
     widthMm: f.widthMm,
     heightMm: f.heightMm,
     thicknessMm: f.thicknessMm,
-    integratedHandle: f.integratedHandle,
     edgeRadius: f.edgeRadius,
     optionsExtra: f.optionsExtra,
     basePrice: f.basePrice,
@@ -90,19 +134,48 @@ function serializeOrder(order: OrderWithRelations) {
 }
 
 function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
+  const handleTypeId = f.handleTypeId ?? null;
   return {
     sortIndex: f.sortIndex ?? index,
-    milling: f.milling,
-    coating: f.coating,
+    millingTypeId: f.millingTypeId,
+    coatingTypeId: f.coatingTypeId,
+    handleTypeId,
+    handleLengthMm: handleTypeId ? f.handleLengthMm ?? null : null,
     color: f.color,
     widthMm: f.widthMm,
     heightMm: f.heightMm,
     thicknessMm: f.thicknessMm,
-    integratedHandle: f.integratedHandle ?? false,
     edgeRadius: f.edgeRadius ?? null,
     optionsExtra: f.optionsExtra ?? null,
     basePrice: f.basePrice,
   };
+}
+
+async function validateFacadeCatalogRefs(
+  prisma: PrismaClient,
+  facades: z.infer<typeof facadeItem>[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const millingIds = [...new Set(facades.map((f) => f.millingTypeId))];
+  const coatingIds = [...new Set(facades.map((f) => f.coatingTypeId))];
+  const handleIds = [...new Set(facades.map((f) => f.handleTypeId).filter((id): id is string => !!id))];
+
+  const [millings, coatings, handles] = await Promise.all([
+    prisma.millingType.findMany({ where: { id: { in: millingIds } } }),
+    prisma.coatingType.findMany({ where: { id: { in: coatingIds } } }),
+    handleIds.length ? prisma.handleType.findMany({ where: { id: { in: handleIds } } }) : Promise.resolve([]),
+  ]);
+
+  if (millings.length !== millingIds.length) {
+    return { ok: false, message: "Неизвестный тип фрезеровки" };
+  }
+  if (coatings.length !== coatingIds.length) {
+    return { ok: false, message: "Неизвестный тип покрытия" };
+  }
+  if (handles.length !== handleIds.length) {
+    return { ok: false, message: "Неизвестный тип ручки" };
+  }
+
+  return { ok: true };
 }
 
 export const ordersRoutes: FastifyPluginAsync = async (app) => {
@@ -143,6 +216,11 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       const parsed = createOrderBody.safeParse(request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
+      }
+
+      const cat = await validateFacadeCatalogRefs(app.prisma, parsed.data.facades);
+      if (!cat.ok) {
+        return reply.code(400).send({ error: cat.message });
       }
 
       const newStage =
@@ -204,6 +282,13 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       const existing = await fetchOrder(app.prisma, id);
       if (!existing) {
         return reply.code(404).send({ error: "Заказ не найден" });
+      }
+
+      if (parsed.data.facades !== undefined) {
+        const cat = await validateFacadeCatalogRefs(app.prisma, parsed.data.facades);
+        if (!cat.ok) {
+          return reply.code(400).send({ error: cat.message });
+        }
       }
 
       if (parsed.data.customerId) {

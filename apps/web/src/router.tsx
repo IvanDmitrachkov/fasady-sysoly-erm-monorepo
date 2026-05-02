@@ -7,6 +7,7 @@ import { OrdersBoardPage } from "./pages/OrdersBoardPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderCuttingPage } from "./pages/OrderCuttingPage";
 import { StagesPage } from "./pages/StagesPage";
+import { FacadeCatalogPage } from "./pages/FacadeCatalogPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AuditPage } from "./pages/AuditPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -36,6 +37,7 @@ export const router = createBrowserRouter(
             { path: "orders/:orderId", element: <OrderDetailPage /> },
             { path: "orders", element: <OrdersPage /> },
             { path: "stages", element: <StagesPage /> },
+            { path: "facade-catalog", element: <FacadeCatalogPage /> },
             { path: "users", element: <UsersPage /> },
             { path: "customers", element: <CustomersPage /> },
             { path: "audit", element: <AuditPage /> },

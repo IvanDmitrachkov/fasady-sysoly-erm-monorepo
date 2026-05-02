@@ -19,6 +19,69 @@ async function main() {
     });
   }
 
+  await prisma.millingType.upsert({
+    where: { slug: "none" },
+    create: {
+      id: "10000000-0000-4000-8000-000000000001",
+      slug: "none",
+      name: "Без фрезеровки",
+      pricePerM2: 0,
+      sortOrder: 0,
+      active: true,
+    },
+    update: { name: "Без фрезеровки", pricePerM2: 0, sortOrder: 0, active: true },
+  });
+  await prisma.millingType.upsert({
+    where: { slug: "standard" },
+    create: {
+      id: "10000000-0000-4000-8000-000000000002",
+      slug: "standard",
+      name: "Фрезеровка (типовая)",
+      pricePerM2: 2500,
+      sortOrder: 10,
+      active: true,
+    },
+    update: { name: "Фрезеровка (типовая)", pricePerM2: 2500, sortOrder: 10, active: true },
+  });
+
+  await prisma.coatingType.upsert({
+    where: { slug: "none" },
+    create: {
+      id: "11000000-0000-4000-8000-000000000001",
+      slug: "none",
+      name: "Без отдельного покрытия",
+      pricePerM2: 0,
+      sortOrder: 0,
+      active: true,
+    },
+    update: { name: "Без отдельного покрытия", pricePerM2: 0, sortOrder: 0, active: true },
+  });
+  await prisma.coatingType.upsert({
+    where: { slug: "standard" },
+    create: {
+      id: "11000000-0000-4000-8000-000000000002",
+      slug: "standard",
+      name: "Покрытие (типовое)",
+      pricePerM2: 1800,
+      sortOrder: 10,
+      active: true,
+    },
+    update: { name: "Покрытие (типовое)", pricePerM2: 1800, sortOrder: 10, active: true },
+  });
+
+  await prisma.handleType.upsert({
+    where: { slug: "classic" },
+    create: {
+      id: "12000000-0000-4000-8000-000000000002",
+      slug: "classic",
+      name: "Классическая",
+      pricePerMeter: 8000,
+      sortOrder: 10,
+      active: true,
+    },
+    update: { name: "Классическая", pricePerMeter: 8000, sortOrder: 10, active: true },
+  });
+
   const demoCustomer = await prisma.customer.upsert({
     where: { id: "demo-customer-id" },
     create: { id: "demo-customer-id", name: "Демо заказчик" },

@@ -14,6 +14,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { timeEntriesRoutes } from "./routes/time-entries.js";
 import { usersRoutes } from "./routes/users.js";
 import { cuttingRoutes } from "./routes/cutting.js";
+import { facadeTypesRoutes } from "./routes/facade-types.js";
 
 export async function buildApp(env: Env) {
   const app = Fastify({ logger: true });
@@ -42,6 +43,7 @@ export async function buildApp(env: Env) {
   await app.register(meRoutes, { prefix: "/api" });
   await app.register(cuttingRoutes, { prefix: "/api" });
   await app.register(ordersRoutes, { prefix: "/api" });
+  await app.register(facadeTypesRoutes, { prefix: "/api" });
   await app.register(stagesRoutes, { prefix: "/api" });
   await app.register(customersRoutes, { prefix: "/api" });
   await app.register(auditRoutes, { prefix: "/api" });

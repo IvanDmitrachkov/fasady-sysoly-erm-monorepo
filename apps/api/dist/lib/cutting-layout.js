@@ -1,19 +1,19 @@
-import { parseDimensionsMm } from "./parse-dimensions-mm.js";
 /** Лист MDF (мм), типовой для цеха. */
 export const CUTTING_SHEET_MM = { widthMm: 2800, heightMm: 2070 };
 export const CUTTING_MATERIAL_MVP = "MDF";
 const MARGIN_MM = 8;
 const KERF_MM = 2;
 function toItem(f) {
-    const dims = parseDimensionsMm(f.dimensionsMm);
-    if (!dims)
+    const w = f.widthMm;
+    const h = f.heightMm;
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0)
         return null;
     return {
         id: f.id,
         sortIndex: f.sortIndex,
         label: `Поз. ${f.sortIndex + 1}`,
-        w: dims.widthMm,
-        h: dims.heightMm,
+        w,
+        h,
     };
 }
 function orientationsForSheet(it, innerW, innerH) {
@@ -123,7 +123,7 @@ export function computeCuttingPlan(input) {
                     facadeId: f.id,
                     sortIndex: f.sortIndex,
                     label: `Поз. ${f.sortIndex + 1}`,
-                    reason: "Не удалось разобрать размеры (ожидается формат вроде 720×2400)",
+                    reason: "Некорректные ширина или высота (мм)",
                 });
             }
             else {

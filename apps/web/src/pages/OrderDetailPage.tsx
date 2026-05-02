@@ -20,13 +20,16 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
+import { coatingTypesList, handleTypesList, millingTypesList } from "../api/facade-types";
 import { orderGet, orderMove, orderUpdate, type OrderUpdatePayload } from "../api/orders";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
+  buildCatalogLookup,
   buildOrderWritePayload,
   createOrderFormSchema,
+  defaultCatalogIds,
   defaultFacadeRow,
   money,
   orderDtoToFormValues,
@@ -57,6 +60,64 @@ export function OrderDetailPage() {
     enabled: canEdit && editOpen,
   });
 
+  const millingTypes = useQuery({
+    queryKey: ["milling-types"],
+    queryFn: millingTypesList,
+    enabled: canEdit && editOpen,
+  });
+  const coatingTypes = useQuery({
+    queryKey: ["coating-types"],
+    queryFn: coatingTypesList,
+    enabled: canEdit && editOpen,
+  });
+  const handleTypes = useQuery({
+    queryKey: ["handle-types"],
+    queryFn: handleTypesList,
+    enabled: canEdit && editOpen,
+  });
+
+  const catalogReady =
+    millingTypes.data && coatingTypes.data && handleTypes.data
+      ? buildCatalogLookup({
+          millingTypes: millingTypes.data.millingTypes,
+          coatingTypes: coatingTypes.data.coatingTypes,
+          handleTypes: handleTypes.data.handleTypes,
+        })
+      : null;
+
+  const newRowDefaults = useMemo(() => {
+    if (!millingTypes.data || !coatingTypes.data) return { millingTypeId: "", coatingTypeId: "" };
+    return defaultCatalogIds({
+      millingTypes: millingTypes.data.millingTypes,
+      coatingTypes: coatingTypes.data.coatingTypes,
+    });
+  }, [millingTypes.data, coatingTypes.data]);
+
+  const millingOptions = useMemo(
+    () =>
+      (millingTypes.data?.millingTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+      })),
+    [millingTypes.data],
+  );
+  const coatingOptions = useMemo(
+    () =>
+      (coatingTypes.data?.coatingTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+      })),
+    [coatingTypes.data],
+  );
+  const handleOptions = useMemo(
+    () =>
+      (handleTypes.data?.handleTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerMeter.toLocaleString("ru-RU")} ₽/м)`,
+      })),
+    [handleTypes.data],
+  );
+
   const customerOptions = useMemo(
     () => (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
     [customers.data],
@@ -75,7 +136,7 @@ export function OrderDetailPage() {
       comment: "",
       overridePercent: null,
       overridePrice: null,
-      facades: [defaultFacadeRow()],
+      facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
     },
   });
 
@@ -261,11 +322,20 @@ export function OrderDetailPage() {
                   {f.widthMm} × {f.heightMm} мм
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {[f.milling, f.coating, f.color].filter(Boolean).join(" · ") || "—"}
+                  {[f.millingType.name, f.coatingType.name, f.color].filter(Boolean).join(" · ") || "—"}
                 </Text>
               </Table.Td>
               <Table.Td>{f.thicknessMm}</Table.Td>
-              <Table.Td>{f.integratedHandle ? "да" : "—"}</Table.Td>
+              <Table.Td>
+                {f.handleType ? (
+                  <Text size="sm">
+                    {f.handleType.name}
+                    {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
+                  </Text>
+                ) : (
+                  "—"
+                )}
+              </Table.Td>
               <Table.Td>{money.format(f.basePrice)}</Table.Td>
             </Table.Tr>
           ))}
@@ -284,33 +354,45 @@ export function OrderDetailPage() {
       >
         <form
           onSubmit={editForm.handleSubmit((v) => {
-            updateMut.mutate(buildOrderWritePayload(v));
+            if (!catalogReady) return;
+            updateMut.mutate(buildOrderWritePayload(v, catalogReady));
           })}
         >
-          <OrderFormBody
-            form={editForm}
-            fields={fields}
-            append={append}
-            remove={remove}
-            customerOptions={customerOptions}
-            actions={
-              <>
-                {updateMut.isError ? (
-                  <Text c="red" size="sm">
-                    {updateMut.error instanceof Error ? updateMut.error.message : "Ошибка"}
-                  </Text>
-                ) : null}
-                <Group justify="flex-end">
-                  <Button type="button" variant="default" onClick={() => setEditOpen(false)}>
-                    Отмена
-                  </Button>
-                  <Button type="submit" loading={updateMut.isPending}>
-                    Сохранить
-                  </Button>
-                </Group>
-              </>
-            }
-          />
+          {!catalogReady ? (
+            <Text c="dimmed" size="sm">
+              Загрузка справочников…
+            </Text>
+          ) : (
+            <OrderFormBody
+              form={editForm}
+              fields={fields}
+              append={append}
+              remove={remove}
+              customerOptions={customerOptions}
+              catalog={catalogReady}
+              millingOptions={millingOptions}
+              coatingOptions={coatingOptions}
+              handleOptions={handleOptions}
+              newRowDefaults={newRowDefaults}
+              actions={
+                <>
+                  {updateMut.isError ? (
+                    <Text c="red" size="sm">
+                      {updateMut.error instanceof Error ? updateMut.error.message : "Ошибка"}
+                    </Text>
+                  ) : null}
+                  <Group justify="flex-end">
+                    <Button type="button" variant="default" onClick={() => setEditOpen(false)}>
+                      Отмена
+                    </Button>
+                    <Button type="submit" loading={updateMut.isPending}>
+                      Сохранить
+                    </Button>
+                  </Group>
+                </>
+              }
+            />
+          )}
         </form>
       </Modal>
     </>

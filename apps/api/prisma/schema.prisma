@@ -53,6 +53,45 @@ model Stage {
   timeEntries TimeEntry[]
 }
 
+/** Тип фрезеровки, цена за м² площади фасада. */
+model MillingType {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  name       String
+  pricePerM2 Float
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  facades    Facade[]
+}
+
+/** Тип покрытия, цена за м². */
+model CoatingType {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  name       String
+  pricePerM2 Float
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  facades    Facade[]
+}
+
+/** Тип интегрированной ручки, цена за погонный метр. */
+model HandleType {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  name           String
+  pricePerMeter  Float
+  sortOrder      Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  facades        Facade[]
+}
+
 model Order {
   id              String    @id @default(uuid())
   /** SQLite: autoincrement только на PK — номер выдаём в коде при create. */
@@ -88,23 +127,32 @@ model TimeEntry {
 }
 
 model Facade {
-  id               String   @id @default(uuid())
-  orderId          String
-  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sortIndex        Int      @default(0)
-  milling          String   @default("")
-  coating          String   @default("")
-  color            String   @default("")
-  widthMm          Float
-  heightMm         Float
-  thicknessMm      Float
-  integratedHandle Boolean  @default(false)
-  edgeRadius       Float?
-  optionsExtra     String?
+  id         String  @id @default(uuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sortIndex  Int     @default(0)
+  color      String  @default("")
+  widthMm    Float
+  heightMm   Float
+  thicknessMm Float
+
+  millingTypeId String
+  millingType   MillingType @relation(fields: [millingTypeId], references: [id], onDelete: Restrict)
+
+  coatingTypeId String
+  coatingType   CoatingType @relation(fields: [coatingTypeId], references: [id], onDelete: Restrict)
+
+  handleTypeId   String?
+  handleType     HandleType? @relation(fields: [handleTypeId], references: [id], onDelete: Restrict)
+  /** Длина интегрированной ручки, мм (если выбран тип ручки). */
+  handleLengthMm Float?
+
+  edgeRadius   Float?
+  optionsExtra String?
   /** Базовая цена позиции, посчитанная на клиенте и сохранённая вместе с заказом */
-  basePrice        Float
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  basePrice    Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model AuditLog {

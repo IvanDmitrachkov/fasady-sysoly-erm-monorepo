@@ -10,38 +10,60 @@ import {
   Paper,
   Select,
   Stack,
-  Switch,
   Text,
   Textarea,
   TextInput,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useMemo } from "react";
-import type { CreateOrderFormValues } from "../lib/order-form";
+import type { CreateOrderFormValues, FacadeCatalogLookup } from "../lib/order-form";
 import { defaultFacadeRow, facadeRowToPricingInput, money } from "../lib/order-form";
 import { computeOrderTotal, estimateFacadeBasePrice, sumFacadeBasePrices } from "../lib/facade-pricing";
+
+const HANDLE_NONE = "__none__";
 
 type OrderFormBodyProps = {
   form: UseFormReturn<CreateOrderFormValues>;
   fields: FieldArrayWithId<CreateOrderFormValues, "facades", "id">[];
-  append: (v: ReturnType<typeof defaultFacadeRow>) => void;
+  append: (v: CreateOrderFormValues["facades"][number]) => void;
   remove: (index: number) => void;
   customerOptions: { value: string; label: string }[];
+  catalog: FacadeCatalogLookup;
+  millingOptions: { value: string; label: string }[];
+  coatingOptions: { value: string; label: string }[];
+  handleOptions: { value: string; label: string }[];
+  newRowDefaults: { millingTypeId: string; coatingTypeId: string };
   actions: React.ReactNode;
 };
 
-export function OrderFormBody({ form, fields, append, remove, customerOptions, actions }: OrderFormBodyProps) {
+export function OrderFormBody({
+  form,
+  fields,
+  append,
+  remove,
+  customerOptions,
+  catalog,
+  millingOptions,
+  coatingOptions,
+  handleOptions,
+  newRowDefaults,
+  actions,
+}: OrderFormBodyProps) {
   const watchedFacades = useWatch({ control: form.control, name: "facades" });
   const watchedOverrides = useWatch({
     control: form.control,
     name: ["overridePercent", "overridePrice"],
   });
 
+  const handleSelectData = useMemo(
+    () => [{ value: HANDLE_NONE, label: "Нет" }, ...handleOptions],
+    [handleOptions],
+  );
+
   const pricing = useMemo(() => {
+    const empty = defaultFacadeRow(newRowDefaults);
     const rows = (watchedFacades ?? []).map((row) =>
-      row
-        ? facadeRowToPricingInput(row)
-        : facadeRowToPricingInput(defaultFacadeRow()),
+      row ? facadeRowToPricingInput(row, catalog) : facadeRowToPricingInput(empty, catalog),
     );
     const linePrices = rows.map((r) => estimateFacadeBasePrice(r));
     const sumBase = sumFacadeBasePrices(rows);
@@ -53,7 +75,7 @@ export function OrderFormBody({ form, fields, append, remove, customerOptions, a
       fixed != null && Number.isFinite(fixed) ? fixed : null,
     );
     return { linePrices, sumBase, total };
-  }, [watchedFacades, watchedOverrides]);
+  }, [watchedFacades, watchedOverrides, catalog, newRowDefaults]);
 
   return (
     <Stack gap="md">
@@ -105,7 +127,6 @@ export function OrderFormBody({ form, fields, append, remove, customerOptions, a
               decimalScale={2}
               value={field.value ?? undefined}
               onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-              clearable
             />
           )}
         />
@@ -121,7 +142,6 @@ export function OrderFormBody({ form, fields, append, remove, customerOptions, a
               thousandSeparator=" "
               value={field.value ?? undefined}
               onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-              clearable
             />
           )}
         />
@@ -130,127 +150,186 @@ export function OrderFormBody({ form, fields, append, remove, customerOptions, a
       <Divider label="Фасады (позиции)" labelPosition="center" />
 
       <Stack gap="sm">
-        {fields.map((fItem, index) => (
-          <Paper key={fItem.id} withBorder p="md" radius="md">
-            <Group justify="space-between" mb="xs">
-              <Text fw={600} size="sm">
-                Позиция {index + 1}
-              </Text>
-              <Group gap="xs">
-                <Text size="sm" c="dimmed">
-                  База:{" "}
-                  <Text span fw={500} c="dark">
-                    {money.format(pricing.linePrices[index] ?? 0)}
-                  </Text>
+        {fields.map((fItem, index) => {
+          const handleId = watchedFacades?.[index]?.handleTypeId ?? null;
+          return (
+            <Paper key={fItem.id} withBorder p="md" radius="md">
+              <Group justify="space-between" mb="xs">
+                <Text fw={600} size="sm">
+                  Позиция {index + 1}
                 </Text>
-                {fields.length > 1 ? (
-                  <ActionIcon
-                    type="button"
-                    variant="subtle"
-                    color="red"
-                    aria-label="Удалить позицию"
-                    onClick={() => remove(index)}
-                  >
-                    <IconTrash size={18} />
-                  </ActionIcon>
-                ) : null}
+                <Group gap="xs">
+                  <Text size="sm" c="dimmed">
+                    База:{" "}
+                    <Text span fw={500} c="dark">
+                      {money.format(pricing.linePrices[index] ?? 0)}
+                    </Text>
+                  </Text>
+                  {fields.length > 1 ? (
+                    <ActionIcon
+                      type="button"
+                      variant="subtle"
+                      color="red"
+                      aria-label="Удалить позицию"
+                      onClick={() => remove(index)}
+                    >
+                      <IconTrash size={18} />
+                    </ActionIcon>
+                  ) : null}
+                </Group>
               </Group>
-            </Group>
 
-            <Stack gap="sm">
-              <Group grow>
-                <TextInput label="Фрезеровка" {...form.register(`facades.${index}.milling`)} />
-                <TextInput label="Покрытие" {...form.register(`facades.${index}.coating`)} />
-                <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
-              </Group>
-              <Group grow align="flex-start">
-                <Controller
-                  name={`facades.${index}.widthMm`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <NumberInput
-                      label="Ширина, мм"
-                      min={1}
-                      decimalScale={0}
-                      thousandSeparator=" "
-                      value={field.value}
-                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name={`facades.${index}.heightMm`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <NumberInput
-                      label="Высота, мм"
-                      min={1}
-                      decimalScale={0}
-                      thousandSeparator=" "
-                      value={field.value}
-                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name={`facades.${index}.thicknessMm`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <NumberInput
-                      label="Толщина, мм"
-                      min={1}
-                      decimalScale={1}
-                      value={field.value}
-                      onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name={`facades.${index}.edgeRadius`}
-                  control={form.control}
-                  render={({ field }) => (
-                    <NumberInput
-                      label="Радиус завала, мм"
-                      placeholder="—"
-                      min={0}
-                      decimalScale={1}
+              <Stack gap="sm">
+                <Group grow align="flex-start">
+                  <Controller
+                    name={`facades.${index}.millingTypeId`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Select
+                        label="Тип фрезеровки"
+                        placeholder="Выберите"
+                        data={millingOptions}
+                        value={field.value || null}
+                        onChange={(v) => field.onChange(v ?? "")}
+                        error={fieldState.error?.message}
+                        searchable
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.coatingTypeId`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Select
+                        label="Тип покрытия"
+                        placeholder="Выберите"
+                        data={coatingOptions}
+                        value={field.value || null}
+                        onChange={(v) => field.onChange(v ?? "")}
+                        error={fieldState.error?.message}
+                        searchable
+                      />
+                    )}
+                  />
+                  <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
+                </Group>
+                <Group grow align="flex-start">
+                  <Controller
+                    name={`facades.${index}.widthMm`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Ширина, мм"
+                        min={1}
+                        decimalScale={0}
+                        thousandSeparator=" "
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.heightMm`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Высота, мм"
+                        min={1}
+                        decimalScale={0}
+                        thousandSeparator=" "
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.thicknessMm`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Толщина, мм"
+                        min={1}
+                        decimalScale={1}
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.edgeRadius`}
+                    control={form.control}
+                    render={({ field }) => (
+                      <NumberInput
+                        label="Радиус завала, мм"
+                        placeholder="—"
+                        min={0}
+                        decimalScale={1}
                       value={field.value ?? undefined}
                       onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                      clearable
                     />
                   )}
                 />
               </Group>
               <Textarea
                 label="Доп. опции"
-                minRows={1}
-                autosize
-                {...form.register(`facades.${index}.optionsExtra`)}
-              />
-              <Controller
-                name={`facades.${index}.integratedHandle`}
-                control={form.control}
-                render={({ field }) => (
-                  <Switch
-                    label="Интегрированная ручка"
-                    checked={field.value}
-                    onChange={(e) => field.onChange(e.currentTarget.checked)}
+                  minRows={1}
+                  autosize
+                  {...form.register(`facades.${index}.optionsExtra`)}
+                />
+                <Group grow align="flex-start">
+                  <Controller
+                    name={`facades.${index}.handleTypeId`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Select
+                        label="Интегрированная ручка"
+                        description="Цена за п.м. задаётся в справочнике"
+                        data={handleSelectData}
+                        value={field.value ?? HANDLE_NONE}
+                        onChange={(v) => {
+                          const next = v === HANDLE_NONE || !v ? null : v;
+                          field.onChange(next);
+                          if (!next) {
+                            form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
+                          }
+                        }}
+                        error={fieldState.error?.message}
+                        searchable
+                      />
+                    )}
                   />
-                )}
-              />
-            </Stack>
-          </Paper>
-        ))}
+                  {handleId ? (
+                    <Controller
+                      name={`facades.${index}.handleLengthMm`}
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <NumberInput
+                          label="Длина ручки, мм"
+                          min={1}
+                          decimalScale={0}
+                          thousandSeparator=" "
+                          value={field.value ?? undefined}
+                          onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                          error={fieldState.error?.message}
+                        />
+                      )}
+                    />
+                  ) : null}
+                </Group>
+              </Stack>
+            </Paper>
+          );
+        })}
       </Stack>
 
       <Button
         type="button"
         variant="light"
         leftSection={<IconPlus size={18} />}
-        onClick={() => append(defaultFacadeRow())}
+        onClick={() => append(defaultFacadeRow(newRowDefaults))}
       >
         Добавить фасад
       </Button>

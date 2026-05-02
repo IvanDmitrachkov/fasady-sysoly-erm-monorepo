@@ -13,6 +13,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { timeEntriesRoutes } from "./routes/time-entries.js";
 import { usersRoutes } from "./routes/users.js";
 import { cuttingRoutes } from "./routes/cutting.js";
+import { facadeTypesRoutes } from "./routes/facade-types.js";
 export async function buildApp(env) {
     const app = Fastify({ logger: true });
     await app.register(cors, {
@@ -31,6 +32,7 @@ export async function buildApp(env) {
     await app.register(meRoutes, { prefix: "/api" });
     await app.register(cuttingRoutes, { prefix: "/api" });
     await app.register(ordersRoutes, { prefix: "/api" });
+    await app.register(facadeTypesRoutes, { prefix: "/api" });
     await app.register(stagesRoutes, { prefix: "/api" });
     await app.register(customersRoutes, { prefix: "/api" });
     await app.register(auditRoutes, { prefix: "/api" });

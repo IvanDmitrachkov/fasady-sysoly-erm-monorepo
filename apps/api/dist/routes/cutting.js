@@ -25,7 +25,8 @@ export const cuttingRoutes = async (app) => {
             facades: order.facades.map((f) => ({
                 id: f.id,
                 sortIndex: f.sortIndex,
-                dimensionsMm: f.dimensionsMm,
+                widthMm: f.widthMm,
+                heightMm: f.heightMm,
                 thicknessMm: f.thicknessMm,
             })),
         });
@@ -46,7 +47,8 @@ export const cuttingRoutes = async (app) => {
             facades: order.facades.map((f) => ({
                 id: f.id,
                 sortIndex: f.sortIndex,
-                dimensionsMm: f.dimensionsMm,
+                widthMm: f.widthMm,
+                heightMm: f.heightMm,
                 thicknessMm: f.thicknessMm,
             })),
         });

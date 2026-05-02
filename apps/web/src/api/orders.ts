@@ -1,25 +1,37 @@
 import { apiJson } from "./http";
+import type { StageDto } from "./stages";
 
-export type StageDto = {
+export type CustomerDto = { id: string; name: string };
+export type { StageDto };
+
+export type FacadeTypeSnippet = {
   id: string;
   slug: string;
   name: string;
-  sortOrder: number;
-  isComplete: boolean;
+  pricePerM2: number;
 };
 
-export type CustomerDto = { id: string; name: string };
+export type HandleTypeSnippet = {
+  id: string;
+  slug: string;
+  name: string;
+  pricePerMeter: number;
+};
 
 export type FacadeDto = {
   id: string;
   sortIndex: number;
-  milling: string;
-  coating: string;
+  millingTypeId: string;
+  coatingTypeId: string;
+  handleTypeId: string | null;
+  handleLengthMm: number | null;
+  millingType: FacadeTypeSnippet;
+  coatingType: FacadeTypeSnippet;
+  handleType: HandleTypeSnippet | null;
   color: string;
   widthMm: number;
   heightMm: number;
   thicknessMm: number;
-  integratedHandle: boolean;
   edgeRadius: number | null;
   optionsExtra: string | null;
   basePrice: number;
@@ -53,13 +65,14 @@ export function orderMove(orderId: string, stageId: string) {
 
 export type OrderCreateFacadePayload = {
   sortIndex?: number;
-  milling: string;
-  coating: string;
+  millingTypeId: string;
+  coatingTypeId: string;
+  handleTypeId?: string | null;
+  handleLengthMm?: number | null;
   color: string;
   widthMm: number;
   heightMm: number;
   thicknessMm: number;
-  integratedHandle?: boolean;
   edgeRadius?: number | null;
   optionsExtra?: string | null;
   basePrice: number;

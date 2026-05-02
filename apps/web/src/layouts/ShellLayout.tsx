@@ -77,6 +77,7 @@ export function ShellLayout() {
         <NavLink label="Заказы" component={RouterLink} to="/orders" active={ordersNavActive} />
         <NavLink label="Канбан" component={RouterLink} to="/orders/board" active={kanbanNavActive} />
         {isAdmin ? <NavLink label="Этапы" component={RouterNavLink} to="/stages" /> : null}
+        {isAdmin ? <NavLink label="Фасады: справочники" component={RouterNavLink} to="/facade-catalog" /> : null}
         {isAdmin ? <NavLink label="Пользователи" component={RouterNavLink} to="/users" /> : null}
         {isAdmin ? <NavLink label="Заказчики" component={RouterNavLink} to="/customers" /> : null}
         {isAdmin ? <NavLink label="Журнал (audit)" component={RouterNavLink} to="/audit" /> : null}

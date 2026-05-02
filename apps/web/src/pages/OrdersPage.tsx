@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,12 +6,15 @@ import { Button, Group, Modal, ScrollArea, Select, Stack, Table, Text, Title } f
 import { Link } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
+import { coatingTypesList, handleTypesList, millingTypesList } from "../api/facade-types";
 import { orderCreate, orderMove, ordersList } from "../api/orders";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import {
+  buildCatalogLookup,
   buildOrderWritePayload,
   createOrderFormSchema,
+  defaultCatalogIds,
   defaultFacadeRow,
   type CreateOrderFormValues,
   money,
@@ -33,6 +36,64 @@ export function OrdersPage() {
     queryFn: customersList,
     enabled: canCreate && createOpen,
   });
+
+  const millingTypes = useQuery({
+    queryKey: ["milling-types"],
+    queryFn: millingTypesList,
+    enabled: canCreate && createOpen,
+  });
+  const coatingTypes = useQuery({
+    queryKey: ["coating-types"],
+    queryFn: coatingTypesList,
+    enabled: canCreate && createOpen,
+  });
+  const handleTypes = useQuery({
+    queryKey: ["handle-types"],
+    queryFn: handleTypesList,
+    enabled: canCreate && createOpen,
+  });
+
+  const catalogReady =
+    millingTypes.data && coatingTypes.data && handleTypes.data
+      ? buildCatalogLookup({
+          millingTypes: millingTypes.data.millingTypes,
+          coatingTypes: coatingTypes.data.coatingTypes,
+          handleTypes: handleTypes.data.handleTypes,
+        })
+      : null;
+
+  const newRowDefaults = useMemo(() => {
+    if (!millingTypes.data || !coatingTypes.data) return { millingTypeId: "", coatingTypeId: "" };
+    return defaultCatalogIds({
+      millingTypes: millingTypes.data.millingTypes,
+      coatingTypes: coatingTypes.data.coatingTypes,
+    });
+  }, [millingTypes.data, coatingTypes.data]);
+
+  const millingOptions = useMemo(
+    () =>
+      (millingTypes.data?.millingTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+      })),
+    [millingTypes.data],
+  );
+  const coatingOptions = useMemo(
+    () =>
+      (coatingTypes.data?.coatingTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+      })),
+    [coatingTypes.data],
+  );
+  const handleOptions = useMemo(
+    () =>
+      (handleTypes.data?.handleTypes ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} (${t.pricePerMeter.toLocaleString("ru-RU")} ₽/м)`,
+      })),
+    [handleTypes.data],
+  );
 
   const customerOptions = useMemo(
     () => (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
@@ -61,9 +122,25 @@ export function OrdersPage() {
       comment: "",
       overridePercent: null,
       overridePrice: null,
-      facades: [defaultFacadeRow()],
+      facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
     },
   });
+
+  useEffect(() => {
+    if (!createOpen || !millingTypes.data || !coatingTypes.data || !handleTypes.data) return;
+    const defs = defaultCatalogIds({
+      millingTypes: millingTypes.data.millingTypes,
+      coatingTypes: coatingTypes.data.coatingTypes,
+    });
+    createForm.reset({
+      customerId: "",
+      deadlineAt: null,
+      comment: "",
+      overridePercent: null,
+      overridePrice: null,
+      facades: [defaultFacadeRow(defs)],
+    });
+  }, [createOpen, millingTypes.data, coatingTypes.data, handleTypes.data, createForm]);
 
   const { fields, append, remove } = useFieldArray({
     control: createForm.control,
@@ -81,7 +158,7 @@ export function OrdersPage() {
         comment: "",
         overridePercent: null,
         overridePrice: null,
-        facades: [defaultFacadeRow()],
+        facades: [defaultFacadeRow(newRowDefaults)],
       });
     },
   });
@@ -185,33 +262,45 @@ export function OrdersPage() {
       >
         <form
           onSubmit={createForm.handleSubmit((v) => {
-            createMut.mutate(buildOrderWritePayload(v));
+            if (!catalogReady) return;
+            createMut.mutate(buildOrderWritePayload(v, catalogReady));
           })}
         >
-          <OrderFormBody
-            form={createForm}
-            fields={fields}
-            append={append}
-            remove={remove}
-            customerOptions={customerOptions}
-            actions={
-              <>
-                {createMut.isError ? (
-                  <Text c="red" size="sm">
-                    {createMut.error instanceof Error ? createMut.error.message : "Ошибка"}
-                  </Text>
-                ) : null}
-                <Group justify="flex-end">
-                  <Button type="button" variant="default" onClick={() => setCreateOpen(false)}>
-                    Отмена
-                  </Button>
-                  <Button type="submit" loading={createMut.isPending}>
-                    Создать заказ
-                  </Button>
-                </Group>
-              </>
-            }
-          />
+          {!catalogReady ? (
+            <Text c="dimmed" size="sm">
+              Загрузка справочников фрезеровки / покрытия / ручки…
+            </Text>
+          ) : (
+            <OrderFormBody
+              form={createForm}
+              fields={fields}
+              append={append}
+              remove={remove}
+              customerOptions={customerOptions}
+              catalog={catalogReady}
+              millingOptions={millingOptions}
+              coatingOptions={coatingOptions}
+              handleOptions={handleOptions}
+              newRowDefaults={newRowDefaults}
+              actions={
+                <>
+                  {createMut.isError ? (
+                    <Text c="red" size="sm">
+                      {createMut.error instanceof Error ? createMut.error.message : "Ошибка"}
+                    </Text>
+                  ) : null}
+                  <Group justify="flex-end">
+                    <Button type="button" variant="default" onClick={() => setCreateOpen(false)}>
+                      Отмена
+                    </Button>
+                    <Button type="submit" loading={createMut.isPending}>
+                      Создать заказ
+                    </Button>
+                  </Group>
+                </>
+              }
+            />
+          )}
         </form>
       </Modal>
     </>

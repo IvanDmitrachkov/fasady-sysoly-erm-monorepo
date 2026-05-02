@@ -4,9 +4,14 @@ export type FacadePricingInput = {
   widthMm: number;
   heightMm: number;
   thicknessMm: number;
-  integratedHandle: boolean;
-  milling: string;
-  coating: string;
+  /** Надбавка за м² по выбранному типу фрезеровки (из справочника). */
+  millingPricePerM2: number;
+  /** Надбавка за м² по выбранному типу покрытия. */
+  coatingPricePerM2: number;
+  /** Цена за п.м. ручки; если null — ручка не выбрана. */
+  handlePricePerMeter: number | null;
+  /** Длина ручки, мм (если выбран тип). */
+  handleLengthMm: number | null;
   color: string;
   edgeRadius?: number | null;
   optionsExtra?: string | null;
@@ -20,9 +25,6 @@ export function rectangleAreaM2(widthMm: number, heightMm: number): number {
 
 const BASE_PER_M2 = 12000;
 const THICKNESS_REF_MM = 16;
-const HANDLE_EXTRA = 1500;
-const MILLING_PER_M2 = 2500;
-const COATING_PER_M2 = 1800;
 const COLOR_EXTRA = 400;
 const EDGE_PER_MM_RADIUS = 35;
 const OPTIONS_PER_CHAR = 12;
@@ -36,9 +38,15 @@ export function estimateFacadeBasePrice(input: FacadePricingInput): number {
     BASE_PER_M2 *
     Math.max(0.5, input.thicknessMm / THICKNESS_REF_MM);
 
-  if (input.integratedHandle) rub += HANDLE_EXTRA;
-  if (input.milling.trim()) rub += area * MILLING_PER_M2;
-  if (input.coating.trim()) rub += area * COATING_PER_M2;
+  rub += area * Math.max(0, input.millingPricePerM2);
+  rub += area * Math.max(0, input.coatingPricePerM2);
+
+  const ppm = input.handlePricePerMeter;
+  const lenMm = input.handleLengthMm;
+  if (ppm != null && Number.isFinite(ppm) && ppm > 0 && lenMm != null && Number.isFinite(lenMm) && lenMm > 0) {
+    rub += (lenMm / 1000) * ppm;
+  }
+
   if (input.color.trim()) rub += COLOR_EXTRA;
 
   const r = input.edgeRadius;
