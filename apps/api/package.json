@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc && node scripts/copy-web.mjs",
     "start": "node dist/server.js",

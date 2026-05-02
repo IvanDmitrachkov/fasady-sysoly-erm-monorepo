@@ -8,7 +8,7 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: "Unauthorized" });
     }
 
-    const payload = request.user as { sub: string; role: string };
+    const payload = request.user as { sub: string; role: string; customerId: string | null };
     const user = await app.prisma.user.findUnique({
       where: { id: payload.sub },
       select: { id: true, email: true, role: true, customerId: true, createdAt: true },

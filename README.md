@@ -21,6 +21,8 @@ yarn db:seed
 
 `yarn db:migrate` при первом запуске спросит имя миграции (можно `init`).
 
+После изменения `prisma/schema.prisma` клиент обновляется автоматически при `yarn install` (в `@erm/api` есть `postinstall: prisma generate`). Если seed падает с **`Cannot read properties of undefined (reading 'upsert')`** — вручную из корня: `yarn workspace @erm/api prisma generate`, затем снова `yarn db:seed`.
+
 ## Разработка
 
 Два процесса (API и Vite; фронт проксирует `/api` на порт 3000):

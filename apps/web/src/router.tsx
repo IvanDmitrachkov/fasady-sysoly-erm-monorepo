@@ -1,6 +1,10 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { ShellLayout } from "./layouts/ShellLayout";
 import { LoginPage } from "./pages/LoginPage";
-import { DashboardPage } from "./pages/DashboardPage";
+import { DashboardHome } from "./pages/DashboardHome";
+import { OrdersPage } from "./pages/OrdersPage";
+import { AuditPage } from "./pages/AuditPage";
+import { CustomersPage } from "./pages/CustomersPage";
 import { ACCESS_TOKEN_KEY } from "./api/http";
 
 function RequireAuth() {
@@ -8,10 +12,6 @@ function RequireAuth() {
   if (!token) {
     return <Navigate to="/login" replace />;
   }
-  return <Outlet />;
-}
-
-function AppLayout() {
   return <Outlet />;
 }
 
@@ -23,8 +23,13 @@ export const router = createBrowserRouter(
       children: [
         {
           path: "/",
-          element: <AppLayout />,
-          children: [{ index: true, element: <DashboardPage /> }],
+          element: <ShellLayout />,
+          children: [
+            { index: true, element: <DashboardHome /> },
+            { path: "orders", element: <OrdersPage /> },
+            { path: "customers", element: <CustomersPage /> },
+            { path: "audit", element: <AuditPage /> },
+          ],
         },
       ],
     },

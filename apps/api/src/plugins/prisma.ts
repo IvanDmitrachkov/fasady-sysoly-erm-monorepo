@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import { PrismaClient } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
+import { ensureDefaultStages } from "../lib/default-stages.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -11,6 +12,7 @@ declare module "fastify" {
 const prismaPluginImpl: FastifyPluginAsync = async (app) => {
   const prisma = new PrismaClient();
   await prisma.$connect();
+  await ensureDefaultStages(prisma);
   app.decorate("prisma", prisma);
   app.addHook("onClose", async () => {
     await prisma.$disconnect();

@@ -13,12 +13,62 @@ enum Role {
   CUSTOMER
 }
 
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  users     User[]
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
   role         Role
   customerId   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  customer     Customer?  @relation(fields: [customerId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Stage {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  name       String
+  sortOrder  Int
+  isComplete Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orders     Order[]  @relation("OrderCurrentStage")
+}
+
+model Order {
+  id              String    @id @default(uuid())
+  /** SQLite: autoincrement только на PK — номер выдаём в коде при create. */
+  orderNumber     Int       @unique
+  createdAt       DateTime  @default(now())
+  deadlineAt      DateTime?
+  comment         String?
+  overridePercent Float?
+  overridePrice   Float?
+  totalPrice      Float?
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  currentStageId  String
+  currentStage    Stage     @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
+  updatedAt       DateTime  @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  message    String
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
 }
