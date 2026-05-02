@@ -23,6 +23,7 @@ import { customersList } from "../api/customers";
 import { orderGet, orderMove, orderUpdate, type OrderUpdatePayload } from "../api/orders";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
+import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
   buildOrderWritePayload,
   createOrderFormSchema,
@@ -256,6 +257,8 @@ export function OrderDetailPage() {
           ))}
         </Table.Tbody>
       </Table>
+
+      <OrderTimeEntriesSection orderId={orderId!} canEdit={canEdit} />
 
       <Modal
         opened={editOpen}

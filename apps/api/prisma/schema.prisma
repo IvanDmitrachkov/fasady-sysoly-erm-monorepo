@@ -23,26 +23,28 @@ model Customer {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
+  id           String       @id @default(uuid())
+  email        String       @unique
   passwordHash String
   role         Role
   customerId   String?
-  customer     Customer?  @relation(fields: [customerId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
   auditLogs    AuditLog[]
+  timeEntries  TimeEntry[]
 }
 
 model Stage {
-  id         String   @id @default(uuid())
-  slug       String   @unique
-  name       String
-  sortOrder  Int
-  isComplete Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  orders     Order[]  @relation("OrderCurrentStage")
+  id          String      @id @default(uuid())
+  slug        String      @unique
+  name        String
+  sortOrder   Int
+  isComplete  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orders      Order[]     @relation("OrderCurrentStage")
+  timeEntries TimeEntry[]
 }
 
 model Order {
@@ -59,8 +61,24 @@ model Order {
   customer        Customer  @relation(fields: [customerId], references: [id])
   currentStageId  String
   currentStage    Stage     @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
-  updatedAt       DateTime  @updatedAt
+  updatedAt       DateTime    @updatedAt
   facades         Facade[]
+  timeEntries     TimeEntry[]
+}
+
+model TimeEntry {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  stageId   String
+  stage     Stage    @relation(fields: [stageId], references: [id])
+  /** Длительность, минуты */
+  minutes   Int
+  comment   String?
+  workedAt  DateTime
+  createdAt DateTime @default(now())
 }
 
 model Facade {

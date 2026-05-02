@@ -46,7 +46,7 @@ yarn dev
 yarn db:reset
 ```
 
-Скрипт удаляет `apps/api/.data/dev.db*` и выполняет `prisma migrate deploy` + seed на **абсолютный** путь к этой БД (совпадает с тем, как API резолвит `file:./.data/...` от каталога пакета, а не от `process.cwd()`).
+Скрипт удаляет `apps/api/.data/dev.db*`, выполняет **migrate deploy + seed во временном файле** в системном `TMPDIR`, затем копирует готовую БД в `apps/api/.data/dev.db` (так Prisma не держит блокировку на каталоге проекта во время миграций). Путь к `dev.db` тот же, что и у API после `resolveSqliteDatabaseUrl`. При `database is locked` не запускайте `prisma migrate` параллельно с API на той же БД — сначала остановите `yarn dev`.
 
 ## Сборка
 
