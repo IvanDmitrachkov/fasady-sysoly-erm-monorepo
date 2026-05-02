@@ -1,7 +1,8 @@
 /** MVP-оценка базовой цены позиции (руб.), по ТЗ считается на клиенте. */
 
 export type FacadePricingInput = {
-  dimensionsMm: string;
+  widthMm: number;
+  heightMm: number;
   thicknessMm: number;
   integratedHandle: boolean;
   milling: string;
@@ -11,19 +12,10 @@ export type FacadePricingInput = {
   optionsExtra?: string | null;
 };
 
-/** Парсит «1200×800», «1200 x 800 мм», «1200х800» → площадь м². */
-export function parseDimensionsToAreaM2(dimensionsMm: string): number {
-  const normalized = dimensionsMm.replace(/мм/gi, "").replace(/×/g, "x").trim();
-  const parts = normalized.split(/[xх]/i).map((s) => parseFloat(s.trim()));
-  const nums = parts.filter((n) => Number.isFinite(n) && n > 0);
-  if (nums.length >= 2) {
-    return (nums[0]! * nums[1]!) / 1_000_000;
-  }
-  if (nums.length === 1) {
-    const a = nums[0]!;
-    return (a * a) / 1_000_000;
-  }
-  return 0;
+/** Площадь прямоугольника по сторонам в мм → м². */
+export function rectangleAreaM2(widthMm: number, heightMm: number): number {
+  if (!Number.isFinite(widthMm) || !Number.isFinite(heightMm) || widthMm <= 0 || heightMm <= 0) return 0;
+  return (widthMm * heightMm) / 1_000_000;
 }
 
 const BASE_PER_M2 = 12000;
@@ -36,7 +28,7 @@ const EDGE_PER_MM_RADIUS = 35;
 const OPTIONS_PER_CHAR = 12;
 
 export function estimateFacadeBasePrice(input: FacadePricingInput): number {
-  const area = parseDimensionsToAreaM2(input.dimensionsMm);
+  const area = rectangleAreaM2(input.widthMm, input.heightMm);
   if (area <= 0) return 0;
 
   let rub =

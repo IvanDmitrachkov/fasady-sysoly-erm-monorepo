@@ -43,3 +43,27 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   return data as T;
 }
+
+export async function apiBlob(path: string): Promise<Blob> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(path, { headers });
+  if (!res.ok) {
+    const text = await res.text();
+    let data: unknown = text;
+    try {
+      data = text ? (JSON.parse(text) as unknown) : text;
+    } catch {
+      /* keep text */
+    }
+    const msg =
+      typeof data === "object" && data !== null && "error" in data
+        ? String((data as { error: unknown }).error)
+        : res.statusText;
+    throw new ApiError(msg || "Request failed", res.status, data);
+  }
+  return res.blob();
+}

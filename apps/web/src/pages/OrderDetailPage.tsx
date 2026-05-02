@@ -142,6 +142,18 @@ export function OrderDetailPage() {
           <Button component={Link} to="/orders/board" variant="light" size="sm">
             Канбан
           </Button>
+          {canEdit ? (
+            <Button
+              component={Link}
+              to={`/orders/${orderId}/cutting`}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="light"
+              size="sm"
+            >
+              Раскрой
+            </Button>
+          ) : null}
         </Group>
       </Group>
 
@@ -245,7 +257,9 @@ export function OrderDetailPage() {
             <Table.Tr key={f.id}>
               <Table.Td>{i + 1}</Table.Td>
               <Table.Td>
-                <Text size="sm">{f.dimensionsMm}</Text>
+                <Text size="sm">
+                  {f.widthMm} × {f.heightMm} мм
+                </Text>
                 <Text size="xs" c="dimmed">
                   {[f.milling, f.coating, f.color].filter(Boolean).join(" · ") || "—"}
                 </Text>

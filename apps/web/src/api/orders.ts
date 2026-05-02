@@ -16,7 +16,8 @@ export type FacadeDto = {
   milling: string;
   coating: string;
   color: string;
-  dimensionsMm: string;
+  widthMm: number;
+  heightMm: number;
   thicknessMm: number;
   integratedHandle: boolean;
   edgeRadius: number | null;
@@ -55,7 +56,8 @@ export type OrderCreateFacadePayload = {
   milling: string;
   coating: string;
   color: string;
-  dimensionsMm: string;
+  widthMm: number;
+  heightMm: number;
   thicknessMm: number;
   integratedHandle?: boolean;
   edgeRadius?: number | null;

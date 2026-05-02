@@ -95,7 +95,8 @@ model Facade {
   milling          String   @default("")
   coating          String   @default("")
   color            String   @default("")
-  dimensionsMm     String
+  widthMm          Float
+  heightMm         Float
   thicknessMm      Float
   integratedHandle Boolean  @default(false)
   edgeRadius       Float?

@@ -164,11 +164,35 @@ export function OrderFormBody({ form, fields, append, remove, customerOptions, a
                 <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
               </Group>
               <Group grow align="flex-start">
-                <TextInput
-                  label="Размеры, мм"
-                  description="Напр. 720×2400"
-                  {...form.register(`facades.${index}.dimensionsMm`)}
-                  error={form.formState.errors.facades?.[index]?.dimensionsMm?.message}
+                <Controller
+                  name={`facades.${index}.widthMm`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Ширина, мм"
+                      min={1}
+                      decimalScale={0}
+                      thousandSeparator=" "
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.heightMm`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Высота, мм"
+                      min={1}
+                      decimalScale={0}
+                      thousandSeparator=" "
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
                 />
                 <Controller
                   name={`facades.${index}.thicknessMm`}
