@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   Button,
   Container,
+  Group,
   Paper,
   PasswordInput,
   Stack,
@@ -10,6 +11,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +52,9 @@ export function LoginPage() {
 
   return (
     <Container size={420} my={80}>
+      <Group justify="flex-end" mb="xs">
+        <ThemeToggle />
+      </Group>
       <Title ta="center" order={2}>
         ERM
       </Title>

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, Burger, Button, Group, NavLink, Text, Title } from "@mantine/core";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useDisclosure } from "@mantine/hooks";
 import { Link as RouterLink, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
@@ -54,6 +55,7 @@ export function ShellLayout() {
           </Group>
           {user ? (
             <Group gap="sm">
+              <ThemeToggle />
               <Text size="sm" c="dimmed">
                 {userDisplayName(user)} · {user.role}
               </Text>
