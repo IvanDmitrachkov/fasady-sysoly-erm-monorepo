@@ -1,0 +1,41 @@
+.time-report-card-cell {
+  min-width: 0;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  padding: 8px 10px;
+  background: var(--mantine-color-default-hover);
+}
+
+.time-report-filters-stack {
+  min-width: 0;
+}
+
+@media (max-width: 47.99em) {
+  .time-report-filters-stack > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    align-self: stretch;
+  }
+
+  .time-report-filter-row,
+  .time-report-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .time-report-filter-row > *,
+  .time-report-modal-actions > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 auto !important;
+    align-self: stretch;
+  }
+
+  .time-report-modal-form > *:not(.time-report-modal-actions) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}

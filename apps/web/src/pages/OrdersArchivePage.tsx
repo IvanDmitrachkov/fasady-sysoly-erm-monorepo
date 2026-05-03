@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Badge, Button, Group, ScrollArea, Table, Text, Title } from "@mantine/core";
+import { Badge, Button, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { ordersList } from "../api/orders";
 import { money } from "../lib/order-form";
+import "./OrdersArchivePage.css";
 
 export function OrdersArchivePage() {
   const orders = useQuery({ queryKey: ["orders", "archive"], queryFn: () => ordersList("archive") });
@@ -66,6 +67,80 @@ export function OrdersArchivePage() {
     );
   });
 
+  const cards = orders.data?.orders.map((o) => {
+    const balance = o.totalCost != null ? o.totalCost - (o.advance ?? 0) : null;
+    return (
+      <Paper key={o.id} withBorder p="md" radius="md">
+        <Stack gap="sm">
+          <Group justify="space-between" align="flex-start" gap="xs">
+            <div>
+              <Text component={Link} to={`/orders/${o.id}`} fw={600} c="brand.6" style={{ textDecoration: "none" }}>
+                №{o.orderNumberFormatted}
+              </Text>
+              <Text size="xs" c="dimmed">
+                создан {dayjs(o.createdAt).format("DD.MM.YY")}
+              </Text>
+            </div>
+            <Badge variant="light">{o.currentStage.name}</Badge>
+          </Group>
+          <div>
+            <Text fw={500} size="sm" lineClamp={1}>
+              {o.customer.name}
+            </Text>
+            {o.customer.phone?.trim() ? (
+              <Text size="xs" c="dimmed" lineClamp={1}>
+                {o.customer.phone}
+              </Text>
+            ) : null}
+          </div>
+          <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
+            <div className="orders-archive-card-cell">
+              <Text size="xs" c="dimmed">
+                Завершён
+              </Text>
+              <Text size="sm">{o.completedAt ? dayjs(o.completedAt).format("DD.MM.YY HH:mm") : "—"}</Text>
+            </div>
+            <div className="orders-archive-card-cell">
+              <Text size="xs" c="dimmed">
+                Срок / работа
+              </Text>
+              <Text size="sm">{o.deadlineAt ? dayjs(o.deadlineAt).format("DD.MM.YY") : "—"}</Text>
+              <Text size="xs" c="dimmed" lineClamp={1}>
+                {o.workType?.trim() ? o.workType : "вид работы не указан"}
+              </Text>
+            </div>
+            <div className="orders-archive-card-cell">
+              <Text size="xs" c="dimmed">
+                Фасады
+              </Text>
+              <Text size="sm">{o.facadeCount} шт.</Text>
+              <Text size="xs" c="dimmed">
+                {o.facades.length} поз. · {o.facadeAreaTotal} м²
+              </Text>
+            </div>
+            <div className="orders-archive-card-cell">
+              <Text size="xs" c="dimmed">
+                Деньги
+              </Text>
+              <Text size="sm">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
+              <Text size="xs" c="dimmed">
+                остаток {balance != null ? money.format(balance) : "—"}
+              </Text>
+            </div>
+          </SimpleGrid>
+          <div>
+            <Text size="xs" c="dimmed">
+              Доставка
+            </Text>
+            <Text size="sm" c={o.deliveryAddress?.trim() ? undefined : "dimmed"} lineClamp={3}>
+              {o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}
+            </Text>
+          </div>
+        </Stack>
+      </Paper>
+    );
+  });
+
   return (
     <>
       <Group justify="space-between" mb="md" wrap="wrap">
@@ -87,7 +162,8 @@ export function OrdersArchivePage() {
 
       {orders.data ? (
         orders.data.orders.length > 0 ? (
-          <ScrollArea type="auto" offsetScrollbars>
+          <>
+          <ScrollArea type="auto" offsetScrollbars visibleFrom="sm">
             <Table striped highlightOnHover withTableBorder verticalSpacing={6} fz="sm" miw={1100}>
               <Table.Thead>
                 <Table.Tr>
@@ -104,6 +180,10 @@ export function OrdersArchivePage() {
               <Table.Tbody>{rows}</Table.Tbody>
             </Table>
           </ScrollArea>
+          <Stack gap="sm" hiddenFrom="sm">
+            {cards}
+          </Stack>
+          </>
         ) : (
           <Text c="dimmed">В архиве пока нет заказов.</Text>
         )

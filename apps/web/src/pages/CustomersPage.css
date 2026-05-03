@@ -1,0 +1,13 @@
+@media (max-width: 47.99em) {
+  .customers-create-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customers-create-row > * {
+    width: 100%;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+}

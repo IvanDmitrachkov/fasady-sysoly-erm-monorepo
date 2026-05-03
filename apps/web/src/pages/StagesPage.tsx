@@ -9,6 +9,7 @@ import {
   Group,
   Modal,
   NumberInput,
+  ScrollArea,
   Stack,
   Switch,
   Table,
@@ -92,7 +93,7 @@ export function StagesPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Title order={3}>Этапы производства</Title>
         <Button
           onClick={() => {
@@ -110,68 +111,70 @@ export function StagesPage() {
       ) : null}
 
       {stages.data ? (
-        <Table striped withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Порядок</Table.Th>
-              <Table.Th>Название</Table.Th>
-              <Table.Th>Slug</Table.Th>
-              <Table.Th>Финальный</Table.Th>
-              <Table.Th style={{ width: 100 }} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {stages.data.stages.map((s) => (
-              <Table.Tr key={s.id}>
-                <Table.Td>{s.sortOrder}</Table.Td>
-                <Table.Td>{s.name}</Table.Td>
-                <Table.Td>
-                  <Text size="sm" c="dimmed" ff="monospace">
-                    {s.slug}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  {s.isComplete ? (
-                    <Badge color="teal" variant="light">
-                      да
-                    </Badge>
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      —
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={4} justify="flex-end">
-                    <ActionIcon
-                      variant="subtle"
-                      aria-label="Изменить"
-                      onClick={() => {
-                        setEditStage(s);
-                        editForm.reset({
-                          slug: s.slug,
-                          name: s.name,
-                          sortOrder: s.sortOrder,
-                          isComplete: s.isComplete,
-                        });
-                      }}
-                    >
-                      <IconPencil size={18} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      aria-label="Удалить"
-                      onClick={() => setDeleteStage(s)}
-                    >
-                      <IconTrash size={18} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
+        <ScrollArea type="auto" offsetScrollbars>
+          <Table striped withTableBorder miw={720}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Порядок</Table.Th>
+                <Table.Th>Название</Table.Th>
+                <Table.Th>Slug</Table.Th>
+                <Table.Th>Финальный</Table.Th>
+                <Table.Th style={{ width: 100 }} />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {stages.data.stages.map((s) => (
+                <Table.Tr key={s.id}>
+                  <Table.Td>{s.sortOrder}</Table.Td>
+                  <Table.Td>{s.name}</Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed" ff="monospace">
+                      {s.slug}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    {s.isComplete ? (
+                      <Badge color="teal" variant="light">
+                        да
+                      </Badge>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        —
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4} justify="flex-end">
+                      <ActionIcon
+                        variant="subtle"
+                        aria-label="Изменить"
+                        onClick={() => {
+                          setEditStage(s);
+                          editForm.reset({
+                            slug: s.slug,
+                            name: s.name,
+                            sortOrder: s.sortOrder,
+                            isComplete: s.isComplete,
+                          });
+                        }}
+                      >
+                        <IconPencil size={18} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        aria-label="Удалить"
+                        onClick={() => setDeleteStage(s)}
+                      >
+                        <IconTrash size={18} />
+                      </ActionIcon>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       ) : null}
 
       <Modal

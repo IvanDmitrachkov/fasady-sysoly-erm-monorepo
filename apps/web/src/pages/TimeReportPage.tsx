@@ -7,7 +7,9 @@ import {
   Group,
   Modal,
   NumberInput,
+  Paper,
   Select,
+  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -15,6 +17,7 @@ import {
   Title,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 import dayjs from "dayjs";
 import { meRequest } from "../api/auth";
@@ -26,6 +29,7 @@ import {
 } from "../api/time-entries";
 import { usersList } from "../api/users";
 import { userDisplayName } from "../lib/user-display-name";
+import "./TimeReportPage.css";
 
 function formatMinutes(m: number): string {
   if (m < 60) return `${m} мин`;
@@ -139,6 +143,44 @@ export function TimeReportPage() {
   });
 
   const totalMinutes = report.data?.totalMinutes ?? 0;
+  const timeEntryCards = report.data?.entries.map((e) => (
+    <Paper key={e.id} withBorder p="md" radius="md">
+      <Stack gap="sm">
+        <Group justify="space-between" align="flex-start" gap="xs">
+          <div>
+            <Text component={Link} to={`/orders/${e.order.id}`} fw={600} c="brand.6" style={{ textDecoration: "none" }}>
+              №{e.order.orderNumber}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {dayjs(e.workedAt).format("DD.MM.YYYY")}
+            </Text>
+          </div>
+          <Text fw={600}>{formatMinutes(e.minutes)}</Text>
+        </Group>
+
+        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
+          <div className="time-report-card-cell">
+            <Text size="xs" c="dimmed">
+              Вид (этап)
+            </Text>
+            <Text size="sm">{e.stage.name}</Text>
+          </div>
+          <div className="time-report-card-cell">
+            <Text size="xs" c="dimmed">
+              Комментарий
+            </Text>
+            <Text size="sm" lineClamp={3}>
+              {e.comment?.trim() ? e.comment : "—"}
+            </Text>
+          </div>
+        </SimpleGrid>
+
+        <Button size="xs" variant="light" fullWidth onClick={() => setEditing(e)}>
+          Редактировать
+        </Button>
+      </Stack>
+    </Paper>
+  ));
 
   if (me.isSuccess && user && user.role !== "ADMIN" && user.role !== "WORKER") {
     return (
@@ -154,7 +196,7 @@ export function TimeReportPage() {
         Отчёт по трудозатратам
       </Title>
 
-      <Stack gap="md" mb="lg">
+      <Stack gap="md" mb="lg" className="time-report-filters-stack">
         {isAdmin ? (
           <Select
             label="Сотрудник"
@@ -163,15 +205,17 @@ export function TimeReportPage() {
             value={employeeId}
             onChange={setEmployeeId}
             disabled={usersQ.isPending}
+            w="100%"
           />
         ) : null}
-        <Group grow align="flex-start">
+        <Group grow align="flex-start" className="time-report-filter-row">
           <DatePickerInput
             label="Начало периода"
             value={periodFrom}
             onChange={setPeriodFrom}
             locale="ru"
             clearable={false}
+            w="100%"
           />
           <DatePickerInput
             label="Конец периода"
@@ -179,6 +223,7 @@ export function TimeReportPage() {
             onChange={setPeriodTo}
             locale="ru"
             clearable={false}
+            w="100%"
           />
         </Group>
       </Stack>
@@ -189,53 +234,74 @@ export function TimeReportPage() {
       ) : null}
 
       {report.data ? (
-        <Table striped withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th colSpan={6} style={{ textAlign: "right", fontWeight: 600 }}>
-                Всего трудозатрат: {formatMinutes(totalMinutes)} ({totalMinutes} мин)
-              </Table.Th>
-            </Table.Tr>
-            <Table.Tr>
-              <Table.Th>Заказ</Table.Th>
-              <Table.Th>Дата работы</Table.Th>
-              <Table.Th>Вид (этап)</Table.Th>
-              <Table.Th>Время</Table.Th>
-              <Table.Th>Комментарий</Table.Th>
-              <Table.Th style={{ width: 140 }} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {report.data.entries.length === 0 ? (
+        <>
+          <Paper withBorder p="md" radius="md" mb="sm" hiddenFrom="sm">
+            <Text size="xs" c="dimmed">
+              Всего трудозатрат
+            </Text>
+            <Text fw={700}>
+              {formatMinutes(totalMinutes)} ({totalMinutes} мин)
+            </Text>
+          </Paper>
+
+          {report.data.entries.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              Нет записей за выбранный период
+            </Text>
+          ) : (
+            <Stack gap="sm" hiddenFrom="sm">
+              {timeEntryCards}
+            </Stack>
+          )}
+
+          <Table striped withTableBorder visibleFrom="sm">
+            <Table.Thead>
               <Table.Tr>
-                <Table.Td colSpan={6}>
-                  <Text size="sm" c="dimmed">
-                    Нет записей за выбранный период
-                  </Text>
-                </Table.Td>
+                <Table.Th colSpan={6} style={{ textAlign: "right", fontWeight: 600 }}>
+                  Всего трудозатрат: {formatMinutes(totalMinutes)} ({totalMinutes} мин)
+                </Table.Th>
               </Table.Tr>
-            ) : (
-              report.data.entries.map((e) => (
-                <Table.Tr key={e.id}>
-                  <Table.Td>№{e.order.orderNumber}</Table.Td>
-                  <Table.Td>{dayjs(e.workedAt).format("DD.MM.YYYY")}</Table.Td>
-                  <Table.Td>{e.stage.name}</Table.Td>
-                  <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={3}>
-                      {e.comment?.trim() ? e.comment : "—"}
+              <Table.Tr>
+                <Table.Th>Заказ</Table.Th>
+                <Table.Th>Дата работы</Table.Th>
+                <Table.Th>Вид (этап)</Table.Th>
+                <Table.Th>Время</Table.Th>
+                <Table.Th>Комментарий</Table.Th>
+                <Table.Th style={{ width: 140 }} />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {report.data.entries.length === 0 ? (
+                <Table.Tr>
+                  <Table.Td colSpan={6}>
+                    <Text size="sm" c="dimmed">
+                      Нет записей за выбранный период
                     </Text>
                   </Table.Td>
-                  <Table.Td>
-                    <Button size="xs" variant="light" onClick={() => setEditing(e)}>
-                      Редактировать
-                    </Button>
-                  </Table.Td>
                 </Table.Tr>
-              ))
-            )}
-          </Table.Tbody>
-        </Table>
+              ) : (
+                report.data.entries.map((e) => (
+                  <Table.Tr key={e.id}>
+                    <Table.Td>№{e.order.orderNumber}</Table.Td>
+                    <Table.Td>{dayjs(e.workedAt).format("DD.MM.YYYY")}</Table.Td>
+                    <Table.Td>{e.stage.name}</Table.Td>
+                    <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
+                    <Table.Td>
+                      <Text size="sm" lineClamp={3}>
+                        {e.comment?.trim() ? e.comment : "—"}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Button size="xs" variant="light" onClick={() => setEditing(e)}>
+                        Редактировать
+                      </Button>
+                    </Table.Td>
+                  </Table.Tr>
+                ))
+              )}
+            </Table.Tbody>
+          </Table>
+        </>
       ) : null}
 
       <Modal
@@ -250,7 +316,7 @@ export function TimeReportPage() {
             updateMut.mutate({ id: editing.id, values });
           })}
         >
-          <Stack gap="sm">
+          <Stack gap="sm" className="time-report-modal-form">
             <Controller
               name="stageId"
               control={editForm.control}
@@ -261,6 +327,7 @@ export function TimeReportPage() {
                   value={field.value || null}
                   onChange={(val) => field.onChange(val ?? "")}
                   error={fieldState.error?.message}
+                  w="100%"
                 />
               )}
             />
@@ -275,6 +342,7 @@ export function TimeReportPage() {
                   value={field.value}
                   onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
                   error={fieldState.error?.message}
+                  w="100%"
                 />
               )}
             />
@@ -288,16 +356,17 @@ export function TimeReportPage() {
                   onChange={(d) => field.onChange(d ?? new Date())}
                   locale="ru"
                   error={fieldState.error?.message}
+                  w="100%"
                 />
               )}
             />
-            <Textarea label="Комментарий" minRows={2} {...editForm.register("comment")} />
+            <Textarea label="Комментарий" minRows={2} w="100%" {...editForm.register("comment")} />
             {updateMut.isError ? (
               <Text c="red" size="sm">
                 {updateMut.error instanceof Error ? updateMut.error.message : "Ошибка"}
               </Text>
             ) : null}
-            <Group justify="flex-end" mt="xs">
+            <Group justify="flex-end" mt="xs" className="time-report-modal-actions">
               <Button variant="default" type="button" onClick={() => setEditing(null)}>
                 Отмена
               </Button>

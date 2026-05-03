@@ -9,6 +9,7 @@ import {
   Group,
   Modal,
   NumberInput,
+  ScrollArea,
   Stack,
   Switch,
   Table,
@@ -100,7 +101,7 @@ function MillingTab() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Text size="sm" c="dimmed">
           Цена применяется за м² площади фасада (надбавка к базе).
         </Text>
@@ -116,7 +117,8 @@ function MillingTab() {
       {q.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
       {q.isError ? <Text c="red">{q.error instanceof Error ? q.error.message : "Ошибка"}</Text> : null}
       {q.data ? (
-        <Table striped withTableBorder>
+        <ScrollArea type="auto" offsetScrollbars>
+        <Table striped withTableBorder miw={760}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Порядок</Table.Th>
@@ -176,6 +178,7 @@ function MillingTab() {
             ))}
           </Table.Tbody>
         </Table>
+        </ScrollArea>
       ) : null}
 
       <Modal
@@ -363,7 +366,7 @@ function CoatingTab() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Text size="sm" c="dimmed">
           Цена за м² площади фасада.
         </Text>
@@ -379,7 +382,8 @@ function CoatingTab() {
       {q.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
       {q.isError ? <Text c="red">{q.error instanceof Error ? q.error.message : "Ошибка"}</Text> : null}
       {q.data ? (
-        <Table striped withTableBorder>
+        <ScrollArea type="auto" offsetScrollbars>
+        <Table striped withTableBorder miw={760}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Порядок</Table.Th>
@@ -439,6 +443,7 @@ function CoatingTab() {
             ))}
           </Table.Tbody>
         </Table>
+        </ScrollArea>
       ) : null}
 
       <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Новый тип покрытия">
@@ -621,7 +626,7 @@ function HandleTab() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Text size="sm" c="dimmed">
           Цена за погонный метр длины ручки.
         </Text>
@@ -637,7 +642,8 @@ function HandleTab() {
       {q.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
       {q.isError ? <Text c="red">{q.error instanceof Error ? q.error.message : "Ошибка"}</Text> : null}
       {q.data ? (
-        <Table striped withTableBorder>
+        <ScrollArea type="auto" offsetScrollbars>
+        <Table striped withTableBorder miw={760}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Порядок</Table.Th>
@@ -697,6 +703,7 @@ function HandleTab() {
             ))}
           </Table.Tbody>
         </Table>
+        </ScrollArea>
       ) : null}
 
       <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Новый тип ручки">

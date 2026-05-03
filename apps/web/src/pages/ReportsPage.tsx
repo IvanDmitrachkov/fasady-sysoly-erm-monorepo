@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Group,
   Paper,
+  ScrollArea,
   Select,
   SimpleGrid,
   Stack,
@@ -16,6 +17,7 @@ import { salesReport, type SalesReportHandleFilter } from "../api/reports";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { money } from "../lib/order-form";
+import "./ReportsPage.css";
 
 const area = new Intl.NumberFormat("ru-RU", {
   minimumFractionDigits: 2,
@@ -82,14 +84,15 @@ export function ReportsPage() {
         Отчёты
       </Title>
 
-      <Stack gap="md" mb="lg">
-        <Group grow align="flex-start">
+      <Stack gap="md" mb="lg" className="reports-filters-stack">
+        <Group grow align="flex-start" className="reports-filter-row">
           <DatePickerInput
             label="Начало периода"
             value={periodFrom}
             onChange={setPeriodFrom}
             locale="ru"
             clearable={false}
+            w="100%"
           />
           <DatePickerInput
             label="Конец периода"
@@ -97,6 +100,7 @@ export function ReportsPage() {
             onChange={setPeriodTo}
             locale="ru"
             clearable={false}
+            w="100%"
           />
           <Select
             label="Отчёт"
@@ -104,10 +108,11 @@ export function ReportsPage() {
             value={reportType}
             onChange={setReportType}
             clearable={false}
+            w="100%"
           />
         </Group>
 
-        <Group grow align="flex-start">
+        <Group grow align="flex-start" className="reports-filter-row">
           <Select
             label="Заказчик"
             placeholder="Все"
@@ -115,6 +120,7 @@ export function ReportsPage() {
             value={customerId}
             onChange={setCustomerId}
             clearable
+            w="100%"
           />
           <Select
             label="Покрытие"
@@ -123,6 +129,7 @@ export function ReportsPage() {
             value={coatingTypeId}
             onChange={setCoatingTypeId}
             clearable
+            w="100%"
           />
           <Select
             label="Фрезеровка"
@@ -131,10 +138,11 @@ export function ReportsPage() {
             value={millingLabel}
             onChange={setMillingLabel}
             clearable
+            w="100%"
           />
         </Group>
 
-        <Group grow align="flex-start">
+        <Group grow align="flex-start" className="reports-filter-row">
           <Select
             label="Цвет"
             placeholder="Все"
@@ -142,6 +150,7 @@ export function ReportsPage() {
             value={color}
             onChange={setColor}
             clearable
+            w="100%"
           />
           <Select
             label="Ручка"
@@ -153,6 +162,7 @@ export function ReportsPage() {
             value={handle}
             onChange={(value) => setHandle(value as SalesReportHandleFilter | null)}
             clearable
+            w="100%"
           />
         </Group>
       </Stack>
@@ -199,46 +209,48 @@ export function ReportsPage() {
             </Paper>
           </SimpleGrid>
 
-          <Table striped highlightOnHover withTableBorder>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Заказ</Table.Th>
-                <Table.Th>Дата реализации</Table.Th>
-                <Table.Th>Заказчик</Table.Th>
-                <Table.Th>Покрытие</Table.Th>
-                <Table.Th>Фрезеровка</Table.Th>
-                <Table.Th>Цвет</Table.Th>
-                <Table.Th>Размер</Table.Th>
-                <Table.Th>Площадь</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {report.data.facades.length === 0 ? (
+          <ScrollArea type="auto" offsetScrollbars>
+            <Table striped highlightOnHover withTableBorder miw={900}>
+              <Table.Thead>
                 <Table.Tr>
-                  <Table.Td colSpan={8}>
-                    <Text size="sm" c="dimmed">
-                      Нет реализованных фасадов за выбранный период
-                    </Text>
-                  </Table.Td>
+                  <Table.Th>Заказ</Table.Th>
+                  <Table.Th>Дата реализации</Table.Th>
+                  <Table.Th>Заказчик</Table.Th>
+                  <Table.Th>Покрытие</Table.Th>
+                  <Table.Th>Фрезеровка</Table.Th>
+                  <Table.Th>Цвет</Table.Th>
+                  <Table.Th>Размер</Table.Th>
+                  <Table.Th>Площадь</Table.Th>
                 </Table.Tr>
-              ) : (
-                report.data.facades.map((facade) => (
-                  <Table.Tr key={facade.id}>
-                    <Table.Td>№{facade.orderNumberFormatted}</Table.Td>
-                    <Table.Td>{formatDate(facade.completedAt)}</Table.Td>
-                    <Table.Td>{facade.customer.name}</Table.Td>
-                    <Table.Td>{facade.coatingType.name}</Table.Td>
-                    <Table.Td>{facade.millingLabel}</Table.Td>
-                    <Table.Td>{facade.color || "—"}</Table.Td>
-                    <Table.Td>
-                      {facade.widthMm}×{facade.heightMm}×{facade.thicknessMm}
+              </Table.Thead>
+              <Table.Tbody>
+                {report.data.facades.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={8}>
+                      <Text size="sm" c="dimmed">
+                        Нет реализованных фасадов за выбранный период
+                      </Text>
                     </Table.Td>
-                    <Table.Td>{area.format(facade.areaM2)} м²</Table.Td>
                   </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
+                ) : (
+                  report.data.facades.map((facade) => (
+                    <Table.Tr key={facade.id}>
+                      <Table.Td>№{facade.orderNumberFormatted}</Table.Td>
+                      <Table.Td>{formatDate(facade.completedAt)}</Table.Td>
+                      <Table.Td>{facade.customer.name}</Table.Td>
+                      <Table.Td>{facade.coatingType.name}</Table.Td>
+                      <Table.Td>{facade.millingLabel}</Table.Td>
+                      <Table.Td>{facade.color || "—"}</Table.Td>
+                      <Table.Td>
+                        {facade.widthMm}×{facade.heightMm}×{facade.thicknessMm}
+                      </Table.Td>
+                      <Table.Td>{area.format(facade.areaM2)} м²</Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         </Stack>
       ) : null}
     </>

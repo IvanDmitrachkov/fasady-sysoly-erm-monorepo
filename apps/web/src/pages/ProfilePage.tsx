@@ -93,7 +93,7 @@ export function ProfilePage() {
 
   return (
     <Stack gap="lg" maw={780}>
-      <Group justify="space-between" align="flex-start">
+      <Group justify="space-between" align="flex-start" wrap="wrap">
         <Stack gap={4}>
           <Group gap="xs">
             <IconUserCircle size={28} stroke={1.5} />

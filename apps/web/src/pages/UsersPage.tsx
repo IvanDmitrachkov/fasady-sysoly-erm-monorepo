@@ -7,6 +7,7 @@ import {
   Group,
   Modal,
   PasswordInput,
+  ScrollArea,
   Select,
   Stack,
   Table,
@@ -204,7 +205,7 @@ export function UsersPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Title order={3}>Пользователи</Title>
         <Button onClick={() => setCreateOpen(true)}>Новый пользователь</Button>
       </Group>
@@ -218,50 +219,52 @@ export function UsersPage() {
       ) : null}
 
       {users.data ? (
-        <Table striped withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Пользователь</Table.Th>
-              <Table.Th>Роль</Table.Th>
-              <Table.Th>Организация</Table.Th>
-              <Table.Th style={{ width: 200 }} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {users.data.users.map((u) => (
-              <Table.Tr key={u.id}>
-                <Table.Td>
-                  <Stack gap={0}>
-                    <Text size="sm">{userDisplayName(u)}</Text>
-                    {userHasDisplayName(u) ? (
-                      <Text size="xs" c="dimmed">
-                        {u.email}
-                      </Text>
-                    ) : null}
-                  </Stack>
-                </Table.Td>
-                <Table.Td>{roleLabel(u.role)}</Table.Td>
-                <Table.Td>{u.customer?.name ?? "—"}</Table.Td>
-                <Table.Td>
-                  <Group gap="xs" justify="flex-end">
-                    <Button size="xs" variant="light" onClick={() => setEditUser(u)}>
-                      Изменить
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color="red"
-                      disabled={u.id === myId}
-                      onClick={() => setDeleteUser(u)}
-                    >
-                      Удалить
-                    </Button>
-                  </Group>
-                </Table.Td>
+        <ScrollArea type="auto" offsetScrollbars>
+          <Table striped withTableBorder miw={760}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Пользователь</Table.Th>
+                <Table.Th>Роль</Table.Th>
+                <Table.Th>Организация</Table.Th>
+                <Table.Th style={{ width: 200 }} />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {users.data.users.map((u) => (
+                <Table.Tr key={u.id}>
+                  <Table.Td>
+                    <Stack gap={0}>
+                      <Text size="sm">{userDisplayName(u)}</Text>
+                      {userHasDisplayName(u) ? (
+                        <Text size="xs" c="dimmed">
+                          {u.email}
+                        </Text>
+                      ) : null}
+                    </Stack>
+                  </Table.Td>
+                  <Table.Td>{roleLabel(u.role)}</Table.Td>
+                  <Table.Td>{u.customer?.name ?? "—"}</Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" justify="flex-end">
+                      <Button size="xs" variant="light" onClick={() => setEditUser(u)}>
+                        Изменить
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="red"
+                        disabled={u.id === myId}
+                        onClick={() => setDeleteUser(u)}
+                      >
+                        Удалить
+                      </Button>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       ) : null}
 
       <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Новый пользователь">

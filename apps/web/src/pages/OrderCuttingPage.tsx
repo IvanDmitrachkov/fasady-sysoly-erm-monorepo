@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Button, Group, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { Button, Group, Paper, ScrollArea, Stack, Table, Text, Title } from "@mantine/core";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { cuttingPdfPath, cuttingPlanGet, type CuttingSheetDto } from "../api/cutting";
@@ -154,22 +154,24 @@ export function OrderCuttingPage() {
                   <Text size="sm" fw={600} mt="md" c="orange">
                     Не поместились на лист
                   </Text>
-                  <Table striped withTableBorder>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Позиция</Table.Th>
-                        <Table.Th>Причина</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {g.overflow.map((o) => (
-                        <Table.Tr key={o.facadeId}>
-                          <Table.Td>{o.label}</Table.Td>
-                          <Table.Td>{o.reason}</Table.Td>
+                  <ScrollArea type="auto" offsetScrollbars>
+                    <Table striped withTableBorder miw={520}>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Позиция</Table.Th>
+                          <Table.Th>Причина</Table.Th>
                         </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {g.overflow.map((o) => (
+                          <Table.Tr key={o.facadeId}>
+                            <Table.Td>{o.label}</Table.Td>
+                            <Table.Td>{o.reason}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
                 </>
               ) : null}
             </Paper>

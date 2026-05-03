@@ -62,6 +62,7 @@ import {
   type CreateOrderFormValues,
 } from "../lib/order-form";
 import dayjs from "dayjs";
+import "./OrderDetailPage.css";
 
 function InfoCard({
   title,
@@ -350,7 +351,7 @@ export function OrderDetailPage() {
               ) : null}
             </Group>
             {canWorkWithOrder ? (
-              <Group gap="xs" wrap="nowrap">
+              <Group gap="xs" className="order-detail-move-row">
                 <Select
                   placeholder="Переместить на…"
                   data={stageOptions.filter((s) => s.value !== o.currentStage.id)}
@@ -407,20 +408,22 @@ export function OrderDetailPage() {
       </SimpleGrid>
 
       <Tabs defaultValue="overview" variant="outline" radius="md">
-        <Tabs.List mb="md">
-          <Tabs.Tab value="overview" leftSection={<IconReceipt size={16} />}>
-            Обзор
-          </Tabs.Tab>
-          <Tabs.Tab value="facades" leftSection={<IconPackage size={16} />}>
-            Фасады
-          </Tabs.Tab>
-          <Tabs.Tab value="finance" leftSection={<IconCash size={16} />}>
-            Финансы
-          </Tabs.Tab>
-          <Tabs.Tab value="time" leftSection={<IconClockHour4 size={16} />}>
-            Трудозатраты
-          </Tabs.Tab>
-        </Tabs.List>
+        <ScrollArea type="auto" offsetScrollbars mb="md">
+          <Tabs.List className="order-detail-tabs-list">
+            <Tabs.Tab value="overview" leftSection={<IconReceipt size={16} />}>
+              Обзор
+            </Tabs.Tab>
+            <Tabs.Tab value="facades" leftSection={<IconPackage size={16} />}>
+              Фасады
+            </Tabs.Tab>
+            <Tabs.Tab value="finance" leftSection={<IconCash size={16} />}>
+              Финансы
+            </Tabs.Tab>
+            <Tabs.Tab value="time" leftSection={<IconClockHour4 size={16} />}>
+              Трудозатраты
+            </Tabs.Tab>
+          </Tabs.List>
+        </ScrollArea>
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, md: 2 }}>
@@ -456,47 +459,49 @@ export function OrderDetailPage() {
                 {o.facadeCount} шт. · {o.facadeAreaTotal} м²
               </Text>
             </Group>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>#</Table.Th>
-                  <Table.Th>Размеры</Table.Th>
-                  <Table.Th>Кол-во</Table.Th>
-                  <Table.Th>Толщина</Table.Th>
-                  <Table.Th>Фрезеровка</Table.Th>
-                  <Table.Th>Покрытие</Table.Th>
-                  <Table.Th>Ручка</Table.Th>
-                  <Table.Th>Цвет</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {o.facades.map((f, i) => (
-                  <Table.Tr key={f.id}>
-                    <Table.Td>{i + 1}</Table.Td>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>
-                        {f.widthMm} × {f.heightMm} мм
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>{f.quantity} шт.</Table.Td>
-                    <Table.Td>{f.thicknessMm} мм</Table.Td>
-                    <Table.Td>{f.millingLabel || "—"}</Table.Td>
-                    <Table.Td>{f.coatingType.name}</Table.Td>
-                    <Table.Td>
-                      {f.handleLabel?.trim() ? (
-                        <Text size="sm">
-                          {f.handleLabel}
-                          {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
-                        </Text>
-                      ) : (
-                        "—"
-                      )}
-                    </Table.Td>
-                    <Table.Td>{f.color || "—"}</Table.Td>
+            <ScrollArea type="auto" offsetScrollbars>
+              <Table striped highlightOnHover withTableBorder miw={900}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>#</Table.Th>
+                    <Table.Th>Размеры</Table.Th>
+                    <Table.Th>Кол-во</Table.Th>
+                    <Table.Th>Толщина</Table.Th>
+                    <Table.Th>Фрезеровка</Table.Th>
+                    <Table.Th>Покрытие</Table.Th>
+                    <Table.Th>Ручка</Table.Th>
+                    <Table.Th>Цвет</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {o.facades.map((f, i) => (
+                    <Table.Tr key={f.id}>
+                      <Table.Td>{i + 1}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" fw={500}>
+                          {f.widthMm} × {f.heightMm} мм
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{f.quantity} шт.</Table.Td>
+                      <Table.Td>{f.thicknessMm} мм</Table.Td>
+                      <Table.Td>{f.millingLabel || "—"}</Table.Td>
+                      <Table.Td>{f.coatingType.name}</Table.Td>
+                      <Table.Td>
+                        {f.handleLabel?.trim() ? (
+                          <Text size="sm">
+                            {f.handleLabel}
+                            {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
+                          </Text>
+                        ) : (
+                          "—"
+                        )}
+                      </Table.Td>
+                      <Table.Td>{f.color || "—"}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
           </Paper>
         </Tabs.Panel>
 

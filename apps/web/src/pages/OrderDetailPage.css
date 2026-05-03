@@ -1,0 +1,17 @@
+.order-detail-tabs-list {
+  flex-wrap: nowrap;
+  min-width: max-content;
+}
+
+@media (max-width: 47.99em) {
+  .order-detail-move-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .order-detail-move-row > * {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+}
