@@ -1,6 +1,10 @@
-import Fastify from "fastify";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
+import fastifyStatic from "@fastify/static";
 import fp from "fastify-plugin";
 import type { Env } from "./env.js";
 import { prismaPlugin } from "./plugins/prisma.js";
@@ -17,6 +21,40 @@ import { cuttingRoutes } from "./routes/cutting.js";
 import { orderPrintRoutes } from "./routes/order-print.js";
 import { facadeTypesRoutes } from "./routes/facade-types.js";
 import { reportsRoutes } from "./routes/reports.js";
+
+function defaultWebDistPath(): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web-dist");
+}
+
+function resolveWebDistPath(env: Env): string {
+  if (!env.WEB_DIST_PATH) return defaultWebDistPath();
+  return path.isAbsolute(env.WEB_DIST_PATH)
+    ? env.WEB_DIST_PATH
+    : path.resolve(process.cwd(), env.WEB_DIST_PATH);
+}
+
+async function registerWebStatic(app: FastifyInstance, env: Env) {
+  const webDistPath = resolveWebDistPath(env);
+  const indexPath = path.join(webDistPath, "index.html");
+
+  if (!existsSync(indexPath)) {
+    const message = `Built web app not found at ${indexPath}. Run the web build and copy-web step first.`;
+    if (env.NODE_ENV === "production") {
+      throw new Error(message);
+    }
+    app.log.warn(message);
+    return;
+  }
+
+  await app.register(fastifyStatic, {
+    root: webDistPath,
+    prefix: "/admin/",
+    wildcard: false,
+  });
+
+  app.get("/admin", async (_request, reply) => reply.redirect("/admin/", 308));
+  app.get("/admin/*", async (_request, reply) => reply.sendFile("index.html"));
+}
 
 export async function buildApp(env: Env) {
   const app = Fastify({ logger: true });
@@ -54,8 +92,7 @@ export async function buildApp(env: Env) {
   await app.register(usersRoutes, { prefix: "/api" });
   await app.register(reportsRoutes, { prefix: "/api" });
 
-  // Раздача SPA под /admin после сборки: см. copy-web.mjs и включите @fastify/static
-  // (пути Vite `base: '/admin/'` нужно согласовать с prefix — добавим в следующей итерации)
+  await registerWebStatic(app, env);
 
   return app;
 }
