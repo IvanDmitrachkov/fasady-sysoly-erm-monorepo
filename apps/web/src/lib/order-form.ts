@@ -17,15 +17,20 @@ export const money = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
 
-export function defaultsForNewFacadeRow(data: {
+export const NO_HANDLE_LABEL = "Нет";
+
+export function isNoHandleLabel(value: string | null | undefined): boolean {
+  return !value?.trim() || value.trim() === NO_HANDLE_LABEL;
+}
+
+export function defaultsForNewFacadeRow(_data: {
   millingTypes: { slug: string; name: string }[];
   coatingTypes: { id: string; slug: string }[];
-}): { millingLabel: string; coatingTypeId: string } {
-  const millingNone = data.millingTypes.find((t) => t.slug === "none");
-  const coatingNone = data.coatingTypes.find((t) => t.slug === "none");
+}): { millingLabel: string; coatingTypeId: string; handleLabel: string } {
   return {
-    millingLabel: millingNone?.name ?? data.millingTypes[0]?.name ?? "",
-    coatingTypeId: coatingNone?.id ?? data.coatingTypes[0]?.id ?? "",
+    millingLabel: "",
+    coatingTypeId: "",
+    handleLabel: "",
   };
 }
 
@@ -33,13 +38,13 @@ const facadeRowSchema = z
   .object({
     millingLabel: z.string(),
     coatingTypeId: z.string().min(1, "Выберите тип покрытия"),
-    handleLabel: z.string().optional(),
+    handleLabel: z.string().min(1, "Выберите ручку"),
     handleLengthMm: z.number().positive().nullable().optional(),
     color: z.string(),
     widthMm: z.number().positive("Ширина > 0"),
     heightMm: z.number().positive("Высота > 0"),
     thicknessMm: z.number().positive("Толщина > 0"),
-    edgeRadius: z.number().finite().nullable().optional(),
+    edgeRadius: z.number().finite("Укажите радиус").optional(),
     optionsExtra: z.string().optional(),
   })
   .superRefine((row, ctx) => {
@@ -50,8 +55,15 @@ const facadeRowSchema = z
         path: ["millingLabel"],
       });
     }
-    const hl = row.handleLabel?.trim() ?? "";
-    if (hl) {
+    if (row.edgeRadius == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Укажите радиус",
+        path: ["edgeRadius"],
+      });
+    }
+    const hl = row.handleLabel.trim();
+    if (!isNoHandleLabel(hl)) {
       if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -88,18 +100,18 @@ export const createOrderFormSchema = z.object({
 export type CreateOrderFormValues = z.infer<typeof createOrderFormSchema>;
 
 export function defaultFacadeRow(
-  defaults?: { millingLabel: string; coatingTypeId: string },
+  defaults?: { millingLabel: string; coatingTypeId: string; handleLabel?: string },
 ): CreateOrderFormValues["facades"][number] {
   return {
     millingLabel: defaults?.millingLabel ?? "",
     coatingTypeId: defaults?.coatingTypeId ?? "",
-    handleLabel: "",
+    handleLabel: defaults?.handleLabel ?? "",
     handleLengthMm: null,
     color: "",
     widthMm: 720,
     heightMm: 2400,
     thicknessMm: 16,
-    edgeRadius: null,
+    edgeRadius: undefined,
     optionsExtra: "",
   };
 }
@@ -107,17 +119,21 @@ export function defaultFacadeRow(
 export function buildFacadesPayload(facades: CreateOrderFormValues["facades"]): OrderCreateFacadePayload[] {
   return facades.map((row, i) => {
     const hl = row.handleLabel?.trim() ?? "";
+    const hasHandle = !isNoHandleLabel(hl);
+    if (row.edgeRadius == null) {
+      throw new Error("Укажите радиус завала");
+    }
     return {
       sortIndex: i,
       millingLabel: row.millingLabel.trim(),
       coatingTypeId: row.coatingTypeId,
-      handleLabel: hl || null,
-      handleLengthMm: hl ? row.handleLengthMm ?? null : null,
+      handleLabel: hasHandle ? hl : null,
+      handleLengthMm: hasHandle ? row.handleLengthMm ?? null : null,
       color: row.color,
       widthMm: row.widthMm,
       heightMm: row.heightMm,
       thicknessMm: row.thicknessMm,
-      edgeRadius: row.edgeRadius ?? null,
+      edgeRadius: row.edgeRadius,
       optionsExtra: row.optionsExtra?.trim() ? row.optionsExtra : null,
       basePrice: 0,
     };
@@ -139,13 +155,13 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
     facades: order.facades.map((f) => ({
       millingLabel: f.millingLabel,
       coatingTypeId: f.coatingTypeId,
-      handleLabel: f.handleLabel ?? "",
+      handleLabel: f.handleLabel ?? NO_HANDLE_LABEL,
       handleLengthMm: f.handleLengthMm ?? null,
       color: f.color,
       widthMm: f.widthMm,
       heightMm: f.heightMm,
       thicknessMm: f.thicknessMm,
-      edgeRadius: f.edgeRadius,
+      edgeRadius: f.edgeRadius ?? 0,
       optionsExtra: f.optionsExtra ?? "",
     })),
   };

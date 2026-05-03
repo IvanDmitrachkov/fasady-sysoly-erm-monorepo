@@ -19,68 +19,58 @@ async function main() {
     });
   }
 
-  await prisma.millingType.upsert({
-    where: { slug: "none" },
-    create: {
-      id: "10000000-0000-4000-8000-000000000001",
-      slug: "none",
-      name: "Без фрезеровки",
-      pricePerM2: 0,
-      sortOrder: 0,
-      active: true,
-    },
-    update: { name: "Без фрезеровки", pricePerM2: 0, sortOrder: 0, active: true },
-  });
-  await prisma.millingType.upsert({
-    where: { slug: "standard" },
-    create: {
-      id: "10000000-0000-4000-8000-000000000002",
-      slug: "standard",
-      name: "Фрезеровка (типовая)",
-      pricePerM2: 2500,
-      sortOrder: 10,
-      active: true,
-    },
-    update: { name: "Фрезеровка (типовая)", pricePerM2: 2500, sortOrder: 10, active: true },
-  });
+  const millingTypes = [
+    ["straight", "Прямой"],
+    ["premier", "Премьер"],
+    ["wave-1", "Волна 1"],
+    ["wave-2", "Волна 2"],
+    ["step", "Степ"],
+    ["baden", "Баден"],
+    ["kant", "Кант"],
+    ["reiki", "Рейки"],
+    ["capriccio", "Капричо"],
+    ["brilon", "Брилон"],
+    ["albero", "Альберо"],
+    ["cone-sampling", "Выборка с конусом"],
+    ["sampling", "Выборка"],
+    ["forest", "Лес"],
+  ] as const;
+  for (const [i, [slug, name]] of millingTypes.entries()) {
+    await prisma.millingType.upsert({
+      where: { slug },
+      create: { slug, name, pricePerM2: 0, sortOrder: i * 10, active: true },
+      update: { name, sortOrder: i * 10, active: true },
+    });
+  }
 
-  await prisma.coatingType.upsert({
-    where: { slug: "none" },
-    create: {
-      id: "11000000-0000-4000-8000-000000000001",
-      slug: "none",
-      name: "Без отдельного покрытия",
-      pricePerM2: 0,
-      sortOrder: 0,
-      active: true,
-    },
-    update: { name: "Без отдельного покрытия", pricePerM2: 0, sortOrder: 0, active: true },
-  });
-  await prisma.coatingType.upsert({
-    where: { slug: "standard" },
-    create: {
-      id: "11000000-0000-4000-8000-000000000002",
-      slug: "standard",
-      name: "Покрытие (типовое)",
-      pricePerM2: 1800,
-      sortOrder: 10,
-      active: true,
-    },
-    update: { name: "Покрытие (типовое)", pricePerM2: 1800, sortOrder: 10, active: true },
-  });
+  const coatingTypes = [
+    ["enamel", "Эмаль"],
+    ["film", "Пленка"],
+  ] as const;
+  for (const [i, [slug, name]] of coatingTypes.entries()) {
+    await prisma.coatingType.upsert({
+      where: { slug },
+      create: { slug, name, pricePerM2: 0, sortOrder: i * 10, active: true },
+      update: { name, sortOrder: i * 10, active: true },
+    });
+  }
 
-  await prisma.handleType.upsert({
-    where: { slug: "classic" },
-    create: {
-      id: "12000000-0000-4000-8000-000000000002",
-      slug: "classic",
-      name: "Классическая",
-      pricePerMeter: 8000,
-      sortOrder: 10,
-      active: true,
-    },
-    update: { name: "Классическая", pricePerMeter: 8000, sortOrder: 10, active: true },
-  });
+  const handleTypes = [
+    ["none", "Нет"],
+    ["l-height", "L, по высоте"],
+    ["u-height", "U, по высоте"],
+    ["c-height", "C, по высоте"],
+    ["l-width", "L, по ширине"],
+    ["u-width", "U, по ширине"],
+    ["c-width", "C, по ширине"],
+  ] as const;
+  for (const [i, [slug, name]] of handleTypes.entries()) {
+    await prisma.handleType.upsert({
+      where: { slug },
+      create: { slug, name, pricePerMeter: 0, sortOrder: i * 10, active: true },
+      update: { name, sortOrder: i * 10, active: true },
+    });
+  }
 
   const demoCustomer = await prisma.customer.upsert({
     where: { id: "demo-customer-id" },

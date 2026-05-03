@@ -116,7 +116,7 @@ export function OrderDetailPage() {
     () =>
       (coatingTypes.data?.coatingTypes ?? []).map((t) => ({
         value: t.id,
-        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+        label: t.name,
       })),
     [coatingTypes.data],
   );

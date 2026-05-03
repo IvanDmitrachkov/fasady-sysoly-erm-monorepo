@@ -18,7 +18,7 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import { useMemo } from "react";
 import type { CreateOrderFormValues } from "../lib/order-form";
-import { defaultFacadeRow, money } from "../lib/order-form";
+import { defaultFacadeRow, isNoHandleLabel, money } from "../lib/order-form";
 import {
   calcFacadeAreaTotal,
   calcFacadeCount,
@@ -32,6 +32,7 @@ import {
 
 type CatalogPriceRow = { name: string; pricePerM2: number };
 type CatalogHandleRow = { name: string; pricePerMeter: number };
+const EDGE_RADIUS_OPTIONS = ["0", "1", "2", "3", "6", "9"];
 
 type OrderFormBodyProps = {
   form: UseFormReturn<CreateOrderFormValues>;
@@ -42,7 +43,7 @@ type OrderFormBodyProps = {
   millingCatalog: CatalogPriceRow[];
   coatingOptions: { value: string; label: string }[];
   handleCatalog: CatalogHandleRow[];
-  newRowDefaults: { millingLabel: string; coatingTypeId: string };
+  newRowDefaults: { millingLabel: string; coatingTypeId: string; handleLabel: string };
   actions: React.ReactNode;
 };
 
@@ -164,7 +165,7 @@ export function OrderFormBody({
 
       <Stack gap="sm">
         {fields.map((fItem, index) => {
-          const handleHas = !!(watchedFacades?.[index]?.handleLabel ?? "").trim();
+          const handleHas = !isNoHandleLabel(watchedFacades?.[index]?.handleLabel);
           return (
             <Paper key={fItem.id} withBorder p="md" radius="md">
               <Group justify="space-between" mb="xs">
@@ -272,14 +273,18 @@ export function OrderFormBody({
                   <Controller
                     name={`facades.${index}.edgeRadius`}
                     control={form.control}
-                    render={({ field }) => (
-                      <NumberInput
+                    render={({ field, fieldState }) => (
+                      <Autocomplete
                         label="Радиус завала, мм"
-                        placeholder="—"
-                        min={0}
-                        decimalScale={1}
-                        value={field.value ?? undefined}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                        placeholder="Выберите или введите"
+                        data={EDGE_RADIUS_OPTIONS}
+                        value={field.value == null ? "" : String(field.value)}
+                        onChange={(value) => {
+                          const normalized = value.replace(",", ".").trim();
+                          const parsed = Number(normalized);
+                          field.onChange(normalized && Number.isFinite(parsed) ? parsed : undefined);
+                        }}
+                        error={fieldState.error?.message}
                       />
                     )}
                   />
@@ -297,12 +302,12 @@ export function OrderFormBody({
                     render={({ field, fieldState }) => (
                       <Autocomplete
                         label="Интегрированная ручка"
-                        placeholder="Нет"
+                        placeholder="Выберите"
                         data={handleNames}
                         value={field.value ?? ""}
                         onChange={(v) => {
                           field.onChange(v);
-                          if (!(v ?? "").trim()) {
+                          if (isNoHandleLabel(v)) {
                             form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
                           }
                         }}
@@ -343,7 +348,11 @@ export function OrderFormBody({
         type="button"
         variant="light"
         leftSection={<IconPlus size={18} />}
-        onClick={() => append(defaultFacadeRow(newRowDefaults))}
+        onClick={() => {
+          const facades = form.getValues("facades");
+          const previous = facades.at(-1);
+          append(previous ? { ...previous } : defaultFacadeRow(newRowDefaults));
+        }}
       >
         Добавить фасад
       </Button>

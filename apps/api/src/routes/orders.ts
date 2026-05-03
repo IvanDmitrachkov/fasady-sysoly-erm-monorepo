@@ -5,6 +5,8 @@ import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHa
 import { writeAudit } from "../lib/audit.js";
 import { formatOrderNumber } from "../lib/order-number.js";
 
+const NO_HANDLE_LABEL = "Нет";
+
 const facadeItem = z
   .object({
     sortIndex: z.number().int().optional(),
@@ -16,7 +18,7 @@ const facadeItem = z
     widthMm: z.number().positive(),
     heightMm: z.number().positive(),
     thicknessMm: z.number(),
-    edgeRadius: z.number().nullable().optional(),
+    edgeRadius: z.number().finite(),
     optionsExtra: z.string().nullable().optional(),
     basePrice: z.number().optional(),
   })
@@ -30,7 +32,7 @@ const facadeItem = z
       });
     }
     const hl = row.handleLabel?.trim() ?? "";
-    if (hl) {
+    if (hl && hl !== NO_HANDLE_LABEL) {
       if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -172,7 +174,8 @@ function serializeOrder(order: OrderWithRelations) {
 }
 
 function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
-  const handleLabel = f.handleLabel?.trim() ? f.handleLabel.trim() : null;
+  const rawHandleLabel = f.handleLabel?.trim() ? f.handleLabel.trim() : null;
+  const handleLabel = rawHandleLabel === NO_HANDLE_LABEL ? null : rawHandleLabel;
   return {
     sortIndex: f.sortIndex ?? index,
     millingLabel: f.millingLabel.trim(),
@@ -183,7 +186,7 @@ function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
     widthMm: f.widthMm,
     heightMm: f.heightMm,
     thicknessMm: f.thicknessMm,
-    edgeRadius: f.edgeRadius ?? null,
+    edgeRadius: f.edgeRadius,
     optionsExtra: f.optionsExtra ?? null,
     basePrice: f.basePrice ?? 0,
   };

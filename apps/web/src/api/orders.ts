@@ -80,7 +80,7 @@ export type OrderCreateFacadePayload = {
   widthMm: number;
   heightMm: number;
   thicknessMm: number;
-  edgeRadius?: number | null;
+  edgeRadius: number;
   optionsExtra?: string | null;
   basePrice?: number;
 };

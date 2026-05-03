@@ -13,7 +13,8 @@ export const DEFAULT_STAGES: readonly {
   { slug: "coating", name: "Покраска / Плёнка", sortOrder: 3, isComplete: false },
   { slug: "polish", name: "Полировка / Шлифовка", sortOrder: 4, isComplete: false },
   { slug: "pack", name: "Упаковка", sortOrder: 5, isComplete: false },
-  { slug: "ship", name: "Отгрузка", sortOrder: 6, isComplete: true },
+  { slug: "ready", name: "Готово", sortOrder: 6, isComplete: false },
+  { slug: "ship", name: "Отгрузка", sortOrder: 7, isComplete: true },
 ];
 
 /** Если этапов нет (не гоняли seed) — создаём дефолтные, чтобы API не падал. */
