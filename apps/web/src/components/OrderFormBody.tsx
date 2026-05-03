@@ -194,7 +194,6 @@ export function OrderFormBody({
                     render={({ field, fieldState }) => (
                       <Autocomplete
                         label="Фрезеровка"
-                        description="Подсказки из справочника или свой текст"
                         placeholder="Начните ввод или выберите"
                         data={millingNames}
                         value={field.value}
@@ -298,7 +297,6 @@ export function OrderFormBody({
                     render={({ field, fieldState }) => (
                       <Autocomplete
                         label="Интегрированная ручка"
-                        description="Подсказки из справочника или свой текст; оставьте пустым, если нет"
                         placeholder="Нет"
                         data={handleNames}
                         value={field.value ?? ""}
