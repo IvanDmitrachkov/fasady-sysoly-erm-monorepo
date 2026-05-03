@@ -1,6 +1,6 @@
 # ERM «Фасады Сысолы»
 
-Монорепо: **Fastify + Prisma (SQLite локально)** + **React + Vite + Mantine**.
+Монорепо: **Fastify + Prisma (MySQL)** + **React + Vite + Mantine**.
 
 Документация: каталог [`docs/`](./docs/), стек: [`docs/technology-stack-and-ui.md`](./docs/technology-stack-and-ui.md).
 
@@ -14,12 +14,10 @@
 ```bash
 cp apps/api/.env.example apps/api/.env
 yarn install
-mkdir -p apps/api/.data
-yarn db:migrate
-yarn db:seed
+yarn db:generate
 ```
 
-`yarn db:migrate` при первом запуске спросит имя миграции (можно `init`).
+Локальный `.env` подключается к общей MySQL БД стенда. Не запускайте локально `prisma migrate`, `prisma db push` и другие команды, меняющие схему: миграции применяет только CI/CD.
 
 После изменения `prisma/schema.prisma` клиент обновляется автоматически при `yarn install` (в `@erm/api` есть `postinstall: prisma generate`). Если seed падает с **`Cannot read properties of undefined (reading 'upsert')`** — вручную из корня: `yarn workspace @erm/api prisma generate`, затем снова `yarn db:seed`.
 
@@ -36,17 +34,19 @@ yarn dev
 - UI: http://localhost:5173/admin/
 - API: http://localhost:3000/api/health
 
-Учётки после seed: `admin@example.com` / `Admin123!`, `worker@example.com` / `Worker123!`, `customer@example.com` / `Customer123!`.
+Учётки после seed: `admin@example.com` / `Admin123!`, `worker@example.com` / `Worker123!`, `customer@example.com` / `Customer123!`. Seed на общей БД запускайте только осознанно, обычно через CI/CD с `SEED_DATABASE=true`.
 
-### Сброс локальной БД (удалит все dev-данные)
+### Миграции БД
 
-Если после обновления схемы API отвечает 500 (`The table main.Facade does not exist` и т.п.), **остановите `yarn dev`** (и Prisma Studio, если открыт), затем:
+Схема общей MySQL БД меняется только через CI/CD. Локальные `yarn db:migrate`, `yarn db:push` и `yarn db:reset` заблокированы guard-скриптом, чтобы случайно не применить изменения в общую БД.
 
-```bash
-yarn db:reset
-```
+Процесс изменения схемы:
 
-Скрипт удаляет `apps/api/.data/dev.db*`, выполняет **migrate deploy + seed во временном файле** в системном `TMPDIR`, затем копирует готовую БД в `apps/api/.data/dev.db` (так Prisma не держит блокировку на каталоге проекта во время миграций). Путь к `dev.db` тот же, что и у API после `resolveSqliteDatabaseUrl`. При `database is locked` не запускайте `prisma migrate` параллельно с API на той же БД — сначала остановите `yarn dev`.
+1. Обновить `apps/api/prisma/schema.prisma`.
+2. Добавить Prisma migration в `apps/api/prisma/migrations/` и закоммитить ее вместе с кодом.
+3. Дождаться деплоя: CI/CD выполнит `db:baseline`, затем `db:migrate:deploy`.
+
+Если деплой падает на миграциях, не чините схему через `db push` с локальной машины. Сначала проверьте состояние `_prisma_migrations` и текст упавшей миграции.
 
 ## Сборка
 
