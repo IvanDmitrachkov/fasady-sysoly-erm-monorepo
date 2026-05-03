@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { PrismaClient } from "@prisma/client";
 
 const BASELINE_MIGRATION = "20260503143500_init_mysql";
 const APP_TABLES = ["Customer", "User", "Stage", "Order", "Facade"];
+const require = createRequire(import.meta.url);
 
 const prisma = new PrismaClient();
 
@@ -59,12 +61,12 @@ async function main() {
 
   await prisma.$disconnect();
 
+  const prismaCliPath = require.resolve("prisma/build/index.js");
   const result = spawnSync(
-    "yarn",
-    ["exec", "prisma", "migrate", "resolve", "--applied", BASELINE_MIGRATION],
+    process.execPath,
+    [prismaCliPath, "migrate", "resolve", "--applied", BASELINE_MIGRATION],
     {
       stdio: "inherit",
-      shell: process.platform === "win32",
     },
   );
 
