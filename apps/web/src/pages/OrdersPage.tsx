@@ -14,7 +14,7 @@ export function OrdersPage() {
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const canMoveOrder = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
 
-  const orders = useQuery({ queryKey: ["orders"], queryFn: ordersList });
+  const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersList() });
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
 
   const stageOptions = useMemo(() => {
