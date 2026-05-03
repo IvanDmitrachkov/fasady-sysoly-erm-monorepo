@@ -4,6 +4,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardHome } from "./pages/DashboardHome";
 import { OrdersPage } from "./pages/OrdersPage";
 import { OrdersBoardPage } from "./pages/OrdersBoardPage";
+import { OrderCreatePage } from "./pages/OrderCreatePage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderCuttingPage } from "./pages/OrderCuttingPage";
 import { StagesPage } from "./pages/StagesPage";
@@ -33,6 +34,7 @@ export const router = createBrowserRouter(
           children: [
             { index: true, element: <DashboardHome /> },
             { path: "orders/board", element: <OrdersBoardPage /> },
+            { path: "orders/new", element: <OrderCreatePage /> },
             { path: "orders/:orderId/cutting", element: <OrderCuttingPage /> },
             { path: "orders/:orderId", element: <OrderDetailPage /> },
             { path: "orders", element: <OrdersPage /> },

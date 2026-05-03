@@ -19,7 +19,7 @@ dayjs.locale("ru");
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="light">
+      <MantineProvider theme={theme} defaultColorScheme="dark">
         <DatesProvider settings={{ locale: "ru", firstDayOfWeek: 1 }}>
           <Notifications position="top-right" />
           <RouterProvider router={router} />

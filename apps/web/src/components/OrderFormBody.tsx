@@ -149,7 +149,7 @@ export function OrderFormBody({
 
       <Divider label="Фасады (позиции)" labelPosition="center" />
 
-      <Paper withBorder p="md" bg="gray.0">
+      <Paper withBorder p="md">
         <Group grow>
           <div>
             <Text size="sm" c="dimmed">Количество фасадов</Text>

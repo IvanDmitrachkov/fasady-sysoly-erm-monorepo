@@ -102,7 +102,7 @@ export function OrdersBoardPage() {
                           p="sm"
                           withBorder
                           radius="sm"
-                          bg={snapshot.isDragging ? "blue.0" : "gray.0"}
+                          bg={snapshot.isDragging ? "brand.4" : "dark.6"}
                           shadow={snapshot.isDragging ? "md" : undefined}
                         >
                           <Group gap="xs" align="flex-start" wrap="nowrap">
