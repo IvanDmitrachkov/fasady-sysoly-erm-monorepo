@@ -1,0 +1,22 @@
+# Build output
+dist/
+web-dist/
+
+# Database
+.data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

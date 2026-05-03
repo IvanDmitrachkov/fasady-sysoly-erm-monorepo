@@ -17,8 +17,17 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import { useMemo } from "react";
 import type { CreateOrderFormValues, FacadeCatalogLookup } from "../lib/order-form";
-import { defaultFacadeRow, facadeRowToPricingInput, money } from "../lib/order-form";
-import { computeOrderTotal, estimateFacadeBasePrice, sumFacadeBasePrices } from "../lib/facade-pricing";
+import { defaultFacadeRow, money } from "../lib/order-form";
+import {
+  calcFacadeAreaTotal,
+  calcFacadeCount,
+  calcFacadeCostTotal,
+  calcMillingCostTotal,
+  calcHandleCostTotal,
+  calcSubtotal,
+  calcTotalCost,
+  calcBalance,
+} from "../lib/facade-pricing";
 
 const HANDLE_NONE = "__none__";
 
@@ -50,9 +59,17 @@ export function OrderFormBody({
   actions,
 }: OrderFormBodyProps) {
   const watchedFacades = useWatch({ control: form.control, name: "facades" });
-  const watchedOverrides = useWatch({
+  const watchedPrices = useWatch({
     control: form.control,
-    name: ["overridePercent", "overridePrice"],
+    name: [
+      "facadePricePerM2",
+      "millingPricePerM2",
+      "handleLengthTotalMm",
+      "handlePricePerMeter",
+      "otherServicesPrice",
+      "discount",
+      "advance",
+    ],
   });
 
   const handleSelectData = useMemo(
@@ -61,21 +78,39 @@ export function OrderFormBody({
   );
 
   const pricing = useMemo(() => {
-    const empty = defaultFacadeRow(newRowDefaults);
-    const rows = (watchedFacades ?? []).map((row) =>
-      row ? facadeRowToPricingInput(row, catalog) : facadeRowToPricingInput(empty, catalog),
-    );
-    const linePrices = rows.map((r) => estimateFacadeBasePrice(r));
-    const sumBase = sumFacadeBasePrices(rows);
-    const pct = watchedOverrides?.[0];
-    const fixed = watchedOverrides?.[1];
-    const total = computeOrderTotal(
-      sumBase,
-      pct != null && Number.isFinite(pct) ? pct : null,
-      fixed != null && Number.isFinite(fixed) ? fixed : null,
-    );
-    return { linePrices, sumBase, total };
-  }, [watchedFacades, watchedOverrides, catalog, newRowDefaults]);
+    const area = calcFacadeAreaTotal((watchedFacades ?? []).map(f => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
+    const count = calcFacadeCount(watchedFacades ?? []);
+    const facadePricePerM2 = watchedPrices?.[0];
+    const millingPricePerM2 = watchedPrices?.[1];
+    const handleLengthTotalMm = watchedPrices?.[2];
+    const handlePricePerMeter = watchedPrices?.[3];
+    const otherServicesPrice = watchedPrices?.[4];
+    const discount = watchedPrices?.[5];
+    const advance = watchedPrices?.[6];
+
+    const facadeCostTotal = calcFacadeCostTotal(area, facadePricePerM2);
+    const millingCostTotal = calcMillingCostTotal(area, millingPricePerM2);
+    const handleCostTotal = calcHandleCostTotal(handleLengthTotalMm, handlePricePerMeter);
+    const subtotal = calcSubtotal({
+      facadeCostTotal,
+      millingCostTotal,
+      handleCostTotal,
+      otherServicesPrice,
+    });
+    const totalCost = calcTotalCost(subtotal, discount);
+    const balance = calcBalance(totalCost, advance);
+
+    return {
+      area: Math.round(area * 100) / 100,
+      count,
+      facadeCostTotal,
+      millingCostTotal,
+      handleCostTotal,
+      subtotal,
+      totalCost,
+      balance,
+    };
+  }, [watchedFacades, watchedPrices]);
 
   return (
     <Stack gap="md">
@@ -114,40 +149,20 @@ export function OrderFormBody({
         <Textarea label="Комментарий к заказу" minRows={2} autosize {...form.register("comment")} />
       </Group>
 
-      <Divider label="Переопределение цены" labelPosition="center" />
-      <Group grow>
-        <Controller
-          name="overridePercent"
-          control={form.control}
-          render={({ field }) => (
-            <NumberInput
-              label="Наценка / скидка, %"
-              description="Итог = сумма × (1 + %/100) + фикс."
-              placeholder="0"
-              decimalScale={2}
-              value={field.value ?? undefined}
-              onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-            />
-          )}
-        />
-        <Controller
-          name="overridePrice"
-          control={form.control}
-          render={({ field }) => (
-            <NumberInput
-              label="Фикс. корректировка, ₽"
-              description="После процента"
-              placeholder="0"
-              decimalScale={0}
-              thousandSeparator=" "
-              value={field.value ?? undefined}
-              onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-            />
-          )}
-        />
-      </Group>
-
       <Divider label="Фасады (позиции)" labelPosition="center" />
+
+      <Paper withBorder p="md" bg="gray.0">
+        <Group grow>
+          <div>
+            <Text size="sm" c="dimmed">Количество фасадов</Text>
+            <Text fw={600}>{pricing.count} шт.</Text>
+          </div>
+          <div>
+            <Text size="sm" c="dimmed">Общая площадь</Text>
+            <Text fw={600}>{pricing.area} м²</Text>
+          </div>
+        </Group>
+      </Paper>
 
       <Stack gap="sm">
         {fields.map((fItem, index) => {
@@ -159,12 +174,6 @@ export function OrderFormBody({
                   Позиция {index + 1}
                 </Text>
                 <Group gap="xs">
-                  <Text size="sm" c="dimmed">
-                    База:{" "}
-                    <Text span fw={500} c="dark">
-                      {money.format(pricing.linePrices[index] ?? 0)}
-                    </Text>
-                  </Text>
                   {fields.length > 1 ? (
                     <ActionIcon
                       type="button"
@@ -267,14 +276,14 @@ export function OrderFormBody({
                         placeholder="—"
                         min={0}
                         decimalScale={1}
-                      value={field.value ?? undefined}
-                      onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                    />
-                  )}
-                />
-              </Group>
-              <Textarea
-                label="Доп. опции"
+                        value={field.value ?? undefined}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                      />
+                    )}
+                  />
+                </Group>
+                <Textarea
+                  label="Доп. опции"
                   minRows={1}
                   autosize
                   {...form.register(`facades.${index}.optionsExtra`)}
@@ -334,23 +343,155 @@ export function OrderFormBody({
         Добавить фасад
       </Button>
 
-      <Paper withBorder p="md" bg="gray.0">
-        <Group justify="space-between">
-          <div>
-            <Text size="sm" c="dimmed">
-              Сумма базовых цен
-            </Text>
-            <Text fw={600}>{money.format(pricing.sumBase)}</Text>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <Text size="sm" c="dimmed">
-              Итого к заказу
-            </Text>
-            <Text fw={700} size="lg">
-              {money.format(pricing.total)}
-            </Text>
-          </div>
-        </Group>
+      <Divider label="Расчет стоимости" labelPosition="center" />
+
+      <Paper withBorder p="md" radius="md">
+        <Stack gap="sm">
+          <Group grow>
+            <Controller
+              name="facadePricePerM2"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Цена фасада, ₽/м²"
+                  description="Начальное значение из таблицы"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <div>
+              <Text size="sm" c="dimmed">Стоимость фасадов</Text>
+              <Text fw={600}>{money.format(pricing.facadeCostTotal)}</Text>
+            </div>
+          </Group>
+
+          <Group grow>
+            <Controller
+              name="millingPricePerM2"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Цена фрезеровки, ₽/м²"
+                  description="Отдельная цена за фрезеровку"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <div>
+              <Text size="sm" c="dimmed">Стоимость фрезеровки</Text>
+              <Text fw={600}>{money.format(pricing.millingCostTotal)}</Text>
+            </div>
+          </Group>
+
+          <Group grow>
+            <Controller
+              name="handleLengthTotalMm"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Длина ручки (общая), мм"
+                  description="Суммарно по всем фасадам"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <Controller
+              name="handlePricePerMeter"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Цена ручки, ₽/м"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <div>
+              <Text size="sm" c="dimmed">Стоимость ручек</Text>
+              <Text fw={600}>{money.format(pricing.handleCostTotal)}</Text>
+            </div>
+          </Group>
+
+          <Group grow>
+            <Controller
+              name="otherServicesPrice"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Прочие услуги, ₽"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+          </Group>
+
+          <Divider />
+
+          <Group grow>
+            <div>
+              <Text size="sm" c="dimmed">Итого</Text>
+              <Text fw={600}>{money.format(pricing.subtotal)}</Text>
+            </div>
+            <Controller
+              name="discount"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Скидка, ₽"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <div>
+              <Text size="sm" c="dimmed">Общая стоимость</Text>
+              <Text fw={700} size="lg">{money.format(pricing.totalCost)}</Text>
+            </div>
+          </Group>
+
+          <Group grow>
+            <Controller
+              name="advance"
+              control={form.control}
+              render={({ field }) => (
+                <NumberInput
+                  label="Аванс, ₽"
+                  placeholder="0"
+                  decimalScale={0}
+                  thousandSeparator=" "
+                  value={field.value ?? undefined}
+                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                />
+              )}
+            />
+            <div>
+              <Text size="sm" c="dimmed">Остаток</Text>
+              <Text fw={600}>{money.format(pricing.balance)}</Text>
+            </div>
+          </Group>
+        </Stack>
       </Paper>
 
       {actions}

@@ -18,7 +18,7 @@ const facadeItem = z
     thicknessMm: z.number(),
     edgeRadius: z.number().nullable().optional(),
     optionsExtra: z.string().nullable().optional(),
-    basePrice: z.number(),
+    basePrice: z.number().optional(),
   })
   .superRefine((row, ctx) => {
     const hid = row.handleTypeId ?? null;
@@ -53,9 +53,23 @@ const createOrderBody = z.object({
   customerId: z.string().min(1),
   deadlineAt: z.string().datetime().optional().nullable(),
   comment: z.string().optional().nullable(),
-  overridePercent: z.number().optional().nullable(),
-  overridePrice: z.number().optional().nullable(),
-  totalPrice: z.number().optional().nullable(),
+
+  // Новые поля цен
+  facadeCount: z.number().int().optional(),
+  facadePricePerM2: z.number().optional().nullable(),
+  facadeAreaTotal: z.number().optional(),
+  facadeCostTotal: z.number().optional().nullable(),
+  millingPricePerM2: z.number().optional().nullable(),
+  millingCostTotal: z.number().optional().nullable(),
+  handleLengthTotalMm: z.number().optional().nullable(),
+  handlePricePerMeter: z.number().optional().nullable(),
+  handleCostTotal: z.number().optional().nullable(),
+  otherServicesPrice: z.number().optional().nullable(),
+  subtotal: z.number().optional().nullable(),
+  discount: z.number().optional().nullable(),
+  totalCost: z.number().optional().nullable(),
+  advance: z.number().optional().nullable(),
+
   facades: z.array(facadeItem).min(1, "Нужен хотя бы один фасад"),
 });
 
@@ -63,9 +77,23 @@ const patchOrderBody = z.object({
   customerId: z.string().min(1).optional(),
   deadlineAt: z.string().datetime().optional().nullable(),
   comment: z.string().optional().nullable(),
-  overridePercent: z.number().optional().nullable(),
-  overridePrice: z.number().optional().nullable(),
-  totalPrice: z.number().optional().nullable(),
+
+  // Новые поля цен
+  facadeCount: z.number().int().optional(),
+  facadePricePerM2: z.number().optional().nullable(),
+  facadeAreaTotal: z.number().optional(),
+  facadeCostTotal: z.number().optional().nullable(),
+  millingPricePerM2: z.number().optional().nullable(),
+  millingCostTotal: z.number().optional().nullable(),
+  handleLengthTotalMm: z.number().optional().nullable(),
+  handlePricePerMeter: z.number().optional().nullable(),
+  handleCostTotal: z.number().optional().nullable(),
+  otherServicesPrice: z.number().optional().nullable(),
+  subtotal: z.number().optional().nullable(),
+  discount: z.number().optional().nullable(),
+  totalCost: z.number().optional().nullable(),
+  advance: z.number().optional().nullable(),
+
   facades: z.array(facadeItem).min(1).optional(),
 });
 
@@ -124,9 +152,23 @@ function serializeOrder(order: OrderWithRelations) {
     createdAt: order.createdAt.toISOString(),
     deadlineAt: order.deadlineAt?.toISOString() ?? null,
     comment: order.comment,
-    overridePercent: order.overridePercent,
-    overridePrice: order.overridePrice,
-    totalPrice: order.totalPrice,
+
+    // Новые поля цен
+    facadeCount: order.facadeCount,
+    facadePricePerM2: order.facadePricePerM2,
+    facadeAreaTotal: order.facadeAreaTotal,
+    facadeCostTotal: order.facadeCostTotal,
+    millingPricePerM2: order.millingPricePerM2,
+    millingCostTotal: order.millingCostTotal,
+    handleLengthTotalMm: order.handleLengthTotalMm,
+    handlePricePerMeter: order.handlePricePerMeter,
+    handleCostTotal: order.handleCostTotal,
+    otherServicesPrice: order.otherServicesPrice,
+    subtotal: order.subtotal,
+    discount: order.discount,
+    totalCost: order.totalCost,
+    advance: order.advance,
+
     customer: order.customer,
     currentStage: order.currentStage,
     facades: order.facades.map(serializeFacade),
@@ -147,7 +189,7 @@ function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
     thicknessMm: f.thicknessMm,
     edgeRadius: f.edgeRadius ?? null,
     optionsExtra: f.optionsExtra ?? null,
-    basePrice: f.basePrice,
+    basePrice: f.basePrice ?? 0,
   };
 }
 
@@ -245,9 +287,23 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
           currentStageId: newStage.id,
           deadlineAt: parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null,
           comment: parsed.data.comment ?? null,
-          overridePercent: parsed.data.overridePercent ?? null,
-          overridePrice: parsed.data.overridePrice ?? null,
-          totalPrice: parsed.data.totalPrice ?? null,
+
+          // Новые поля цен
+          facadeCount: parsed.data.facadeCount ?? 0,
+          facadePricePerM2: parsed.data.facadePricePerM2 ?? null,
+          facadeAreaTotal: parsed.data.facadeAreaTotal ?? 0,
+          facadeCostTotal: parsed.data.facadeCostTotal ?? null,
+          millingPricePerM2: parsed.data.millingPricePerM2 ?? null,
+          millingCostTotal: parsed.data.millingCostTotal ?? null,
+          handleLengthTotalMm: parsed.data.handleLengthTotalMm ?? null,
+          handlePricePerMeter: parsed.data.handlePricePerMeter ?? null,
+          handleCostTotal: parsed.data.handleCostTotal ?? null,
+          otherServicesPrice: parsed.data.otherServicesPrice ?? null,
+          subtotal: parsed.data.subtotal ?? null,
+          discount: parsed.data.discount ?? null,
+          totalCost: parsed.data.totalCost ?? null,
+          advance: parsed.data.advance ?? null,
+
           facades: {
             create: parsed.data.facades.map(mapFacadeCreate),
           },
@@ -304,9 +360,22 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         data.deadlineAt = parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null;
       }
       if (parsed.data.comment !== undefined) data.comment = parsed.data.comment;
-      if (parsed.data.overridePercent !== undefined) data.overridePercent = parsed.data.overridePercent;
-      if (parsed.data.overridePrice !== undefined) data.overridePrice = parsed.data.overridePrice;
-      if (parsed.data.totalPrice !== undefined) data.totalPrice = parsed.data.totalPrice;
+
+      // Новые поля цен
+      if (parsed.data.facadeCount !== undefined) data.facadeCount = parsed.data.facadeCount;
+      if (parsed.data.facadePricePerM2 !== undefined) data.facadePricePerM2 = parsed.data.facadePricePerM2;
+      if (parsed.data.facadeAreaTotal !== undefined) data.facadeAreaTotal = parsed.data.facadeAreaTotal;
+      if (parsed.data.facadeCostTotal !== undefined) data.facadeCostTotal = parsed.data.facadeCostTotal;
+      if (parsed.data.millingPricePerM2 !== undefined) data.millingPricePerM2 = parsed.data.millingPricePerM2;
+      if (parsed.data.millingCostTotal !== undefined) data.millingCostTotal = parsed.data.millingCostTotal;
+      if (parsed.data.handleLengthTotalMm !== undefined) data.handleLengthTotalMm = parsed.data.handleLengthTotalMm;
+      if (parsed.data.handlePricePerMeter !== undefined) data.handlePricePerMeter = parsed.data.handlePricePerMeter;
+      if (parsed.data.handleCostTotal !== undefined) data.handleCostTotal = parsed.data.handleCostTotal;
+      if (parsed.data.otherServicesPrice !== undefined) data.otherServicesPrice = parsed.data.otherServicesPrice;
+      if (parsed.data.subtotal !== undefined) data.subtotal = parsed.data.subtotal;
+      if (parsed.data.discount !== undefined) data.discount = parsed.data.discount;
+      if (parsed.data.totalCost !== undefined) data.totalCost = parsed.data.totalCost;
+      if (parsed.data.advance !== undefined) data.advance = parsed.data.advance;
 
       const order =
         parsed.data.facades !== undefined
@@ -330,7 +399,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       const uid = authUserId(request);
       const auditExtra =
         parsed.data.facades !== undefined
-          ? ` (${parsed.data.facades.length} поз., сумма ${parsed.data.totalPrice ?? "—"})`
+          ? ` (${parsed.data.facades.length} поз., сумма ${parsed.data.totalCost ?? "—"})`
           : "";
       await writeAudit(
         app.prisma,

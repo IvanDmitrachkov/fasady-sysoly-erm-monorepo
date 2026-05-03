@@ -7,12 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  WORKER
-  CUSTOMER
-}
-
 model Customer {
   id        String   @id @default(uuid())
   name      String
@@ -23,22 +17,22 @@ model Customer {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  email        String       @unique
-  /** Имя (необязательно) */
+  id           String      @id @default(uuid())
+  email        String      @unique
+  /// * Имя (необязательно)
   firstName    String?
-  /** Фамилия (необязательно) */
+  /// * Фамилия (необязательно)
   lastName     String?
-  /** Отчество (необязательно) */
+  /// * Отчество (необязательно)
   patronymic   String?
   passwordHash String
   role         Role
   customerId   String?
-  customer     Customer?    @relation(fields: [customerId], references: [id])
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   auditLogs    AuditLog[]
   timeEntries  TimeEntry[]
+  customer     Customer?   @relation(fields: [customerId], references: [id])
 }
 
 model Stage {
@@ -53,7 +47,7 @@ model Stage {
   timeEntries TimeEntry[]
 }
 
-/** Тип фрезеровки, цена за м² площади фасада. */
+/// * Тип фрезеровки, цена за м² площади фасада.
 model MillingType {
   id         String   @id @default(uuid())
   slug       String   @unique
@@ -66,7 +60,7 @@ model MillingType {
   facades    Facade[]
 }
 
-/** Тип покрытия, цена за м². */
+/// * Тип покрытия, цена за м².
 model CoatingType {
   id         String   @id @default(uuid())
   slug       String   @unique
@@ -79,89 +73,116 @@ model CoatingType {
   facades    Facade[]
 }
 
-/** Тип интегрированной ручки, цена за погонный метр. */
+/// * Тип интегрированной ручки, цена за погонный метр.
 model HandleType {
-  id             String   @id @default(uuid())
-  slug           String   @unique
-  name           String
-  pricePerMeter  Float
-  sortOrder      Int      @default(0)
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  facades        Facade[]
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  pricePerMeter Float
+  sortOrder     Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  facades       Facade[]
 }
 
 model Order {
-  id              String    @id @default(uuid())
-  /** SQLite: autoincrement только на PK — номер выдаём в коде при create. */
-  orderNumber     Int       @unique
-  createdAt       DateTime  @default(now())
-  deadlineAt      DateTime?
-  comment         String?
-  overridePercent Float?
-  overridePrice   Float?
-  totalPrice      Float?
-  customerId      String
-  customer        Customer  @relation(fields: [customerId], references: [id])
-  currentStageId  String
-  currentStage    Stage     @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
-  updatedAt       DateTime    @updatedAt
-  facades         Facade[]
-  timeEntries     TimeEntry[]
+  id                  String      @id @default(uuid())
+  /// * SQLite: autoincrement только на PK — номер выдаём в коде при create.
+  orderNumber         Int         @unique
+  createdAt           DateTime    @default(now())
+  deadlineAt          DateTime?
+  comment             String?
+  /// * Количество фасадов штук
+  facadeCount         Int         @default(0)
+  /// * Цена одного кв.м фасада (редактируется менеджером)
+  facadePricePerM2    Float?
+  /// * Общая площадь фасадов, м² (вычисляется)
+  facadeAreaTotal     Float       @default(0)
+  /// * Стоимость прямых фасадов, руб. = facadeAreaTotal * facadePricePerM2
+  facadeCostTotal     Float?
+  /// * Цена за кв.м фрезеровки (редактируется менеджером)
+  millingPricePerM2   Float?
+  /// * Стоимость фрезеровки, руб. = facadeAreaTotal * millingPricePerM2
+  millingCostTotal    Float?
+  /// * Длина интегрированной ручки, мм (суммарно, вводит менеджер)
+  handleLengthTotalMm Float?
+  /// * Цена метра интегрированной ручки (редактируется менеджером)
+  handlePricePerMeter Float?
+  /// * Стоимость интегрированной ручки, руб. = handleLengthTotalMm/1000 * handlePricePerMeter
+  handleCostTotal     Float?
+  /// * Прочие услуги, цена (отдельное поле)
+  otherServicesPrice  Float?
+  /// * Итого, руб. = facadeCostTotal + millingCostTotal + handleCostTotal + otherServicesPrice
+  subtotal            Float?
+  /// * Скидка, руб (вводит пользователь)
+  discount            Float?
+  /// * Общая стоимость = subtotal - discount
+  totalCost           Float?
+  /// * Аванс (новое поле)
+  advance             Float?
+  customerId          String
+  currentStageId      String
+  updatedAt           DateTime    @updatedAt
+  facades             Facade[]
+  currentStage        Stage       @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
+  customer            Customer    @relation(fields: [customerId], references: [id])
+  timeEntries         TimeEntry[]
 }
 
 model TimeEntry {
   id        String   @id @default(uuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   stageId   String
-  stage     Stage    @relation(fields: [stageId], references: [id])
-  /** Длительность, минуты */
+  /// * Длительность, минуты
   minutes   Int
   comment   String?
   workedAt  DateTime
   createdAt DateTime @default(now())
+  stage     Stage    @relation(fields: [stageId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Facade {
-  id         String  @id @default(uuid())
-  orderId    String
-  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sortIndex  Int     @default(0)
-  color      String  @default("")
-  widthMm    Float
-  heightMm   Float
-  thicknessMm Float
-
-  millingTypeId String
-  millingType   MillingType @relation(fields: [millingTypeId], references: [id], onDelete: Restrict)
-
-  coatingTypeId String
-  coatingType   CoatingType @relation(fields: [coatingTypeId], references: [id], onDelete: Restrict)
-
+  id             String      @id @default(uuid())
+  orderId        String
+  sortIndex      Int         @default(0)
+  color          String      @default("")
+  widthMm        Float
+  heightMm       Float
+  thicknessMm    Float
+  millingTypeId  String
+  coatingTypeId  String
   handleTypeId   String?
-  handleType     HandleType? @relation(fields: [handleTypeId], references: [id], onDelete: Restrict)
-  /** Длина интегрированной ручки, мм (если выбран тип ручки). */
+  /// * Длина интегрированной ручки, мм (если выбран тип ручки).
   handleLengthMm Float?
-
-  edgeRadius   Float?
-  optionsExtra String?
-  /** Базовая цена позиции, посчитанная на клиенте и сохранённая вместе с заказом */
-  basePrice    Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  edgeRadius     Float?
+  optionsExtra   String?
+  /// * Базовая цена позиции, посчитанная на клиенте и сохранённая вместе с заказом
+  basePrice      Float
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  handleType     HandleType? @relation(fields: [handleTypeId], references: [id], onDelete: Restrict)
+  coatingType    CoatingType @relation(fields: [coatingTypeId], references: [id])
+  millingType    MillingType @relation(fields: [millingTypeId], references: [id])
+  order          Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
   action     String
   message    String
   entityType String?
   entityId   String?
   createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  WORKER
+  CUSTOMER
 }

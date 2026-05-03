@@ -44,9 +44,23 @@ export type OrderDto = {
   createdAt: string;
   deadlineAt: string | null;
   comment: string | null;
-  overridePercent: number | null;
-  overridePrice: number | null;
-  totalPrice: number | null;
+
+  // Новые поля цен
+  facadeCount: number;
+  facadePricePerM2: number | null;
+  facadeAreaTotal: number;
+  facadeCostTotal: number | null;
+  millingPricePerM2: number | null;
+  millingCostTotal: number | null;
+  handleLengthTotalMm: number | null;
+  handlePricePerMeter: number | null;
+  handleCostTotal: number | null;
+  otherServicesPrice: number | null;
+  subtotal: number | null;
+  discount: number | null;
+  totalCost: number | null;
+  advance: number | null;
+
   customer: CustomerDto;
   currentStage: StageDto;
   facades: FacadeDto[];
@@ -75,16 +89,27 @@ export type OrderCreateFacadePayload = {
   thicknessMm: number;
   edgeRadius?: number | null;
   optionsExtra?: string | null;
-  basePrice: number;
+  basePrice?: number;
 };
 
 export function orderCreate(body: {
   customerId: string;
   deadlineAt?: string | null;
   comment?: string | null;
-  overridePercent?: number | null;
-  overridePrice?: number | null;
-  totalPrice?: number | null;
+  facadeCount?: number;
+  facadePricePerM2?: number | null;
+  facadeAreaTotal?: number;
+  facadeCostTotal?: number | null;
+  millingPricePerM2?: number | null;
+  millingCostTotal?: number | null;
+  handleLengthTotalMm?: number | null;
+  handlePricePerMeter?: number | null;
+  handleCostTotal?: number | null;
+  otherServicesPrice?: number | null;
+  subtotal?: number | null;
+  discount?: number | null;
+  totalCost?: number | null;
+  advance?: number | null;
   facades: OrderCreateFacadePayload[];
 }) {
   return apiJson<{ order: OrderDto }>("/api/orders", {
@@ -101,9 +126,20 @@ export type OrderUpdatePayload = {
   customerId?: string;
   deadlineAt?: string | null;
   comment?: string | null;
-  overridePercent?: number | null;
-  overridePrice?: number | null;
-  totalPrice?: number | null;
+  facadeCount?: number;
+  facadePricePerM2?: number | null;
+  facadeAreaTotal?: number;
+  facadeCostTotal?: number | null;
+  millingPricePerM2?: number | null;
+  millingCostTotal?: number | null;
+  handleLengthTotalMm?: number | null;
+  handlePricePerMeter?: number | null;
+  handleCostTotal?: number | null;
+  otherServicesPrice?: number | null;
+  subtotal?: number | null;
+  discount?: number | null;
+  totalCost?: number | null;
+  advance?: number | null;
   facades?: OrderCreateFacadePayload[];
 };
 

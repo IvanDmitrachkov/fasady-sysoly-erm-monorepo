@@ -135,8 +135,6 @@ export function OrderDetailPage() {
       customerId: "",
       deadlineAt: null,
       comment: "",
-      overridePercent: null,
-      overridePrice: null,
       facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
     },
   });
@@ -286,18 +284,58 @@ export function OrderDetailPage() {
             <Text>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
             <Divider my="sm" />
             <Text size="sm" c="dimmed">
+              Количество фасадов
+            </Text>
+            <Text>{o.facadeCount} шт.</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Общая площадь
+            </Text>
+            <Text>{o.facadeAreaTotal} м²</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Стоимость фасадов
+            </Text>
+            <Text>{o.facadeCostTotal != null ? money.format(o.facadeCostTotal) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Стоимость фрезеровки
+            </Text>
+            <Text>{o.millingCostTotal != null ? money.format(o.millingCostTotal) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Стоимость ручек
+            </Text>
+            <Text>{o.handleCostTotal != null ? money.format(o.handleCostTotal) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Прочие услуги
+            </Text>
+            <Text>{o.otherServicesPrice != null ? money.format(o.otherServicesPrice) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
               Итого
             </Text>
-            <Text fw={700} size="lg">
-              {o.totalPrice != null ? money.format(o.totalPrice) : "—"}
+            <Text fw={600}>{o.subtotal != null ? money.format(o.subtotal) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Скидка
             </Text>
-            {(o.overridePercent != null || o.overridePrice != null) && (
+            <Text>{o.discount != null ? money.format(o.discount) : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Общая стоимость
+            </Text>
+            <Text fw={700} size="lg">
+              {o.totalCost != null ? money.format(o.totalCost) : "—"}
+            </Text>
+            {o.advance != null && (
               <>
                 <Divider my="sm" />
-                <Text size="xs" c="dimmed">
-                  Коррекция: {o.overridePercent != null ? `${o.overridePercent}%` : ""}{" "}
-                  {o.overridePrice != null ? ` ${money.format(o.overridePrice)}` : ""}
+                <Text size="sm" c="dimmed">
+                  Аванс
                 </Text>
+                <Text>{money.format(o.advance)}</Text>
               </>
             )}
           </Paper>
@@ -328,7 +366,7 @@ export function OrderDetailPage() {
             <Table.Th>Размеры</Table.Th>
             <Table.Th>Толщ.</Table.Th>
             <Table.Th>Ручка</Table.Th>
-            <Table.Th>База</Table.Th>
+            <Table.Th>Цвет</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -340,7 +378,7 @@ export function OrderDetailPage() {
                   {f.widthMm} × {f.heightMm} мм
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {[f.millingType.name, f.coatingType.name, f.color].filter(Boolean).join(" · ") || "—"}
+                  {[f.millingType.name, f.coatingType.name].filter(Boolean).join(" · ") || "—"}
                 </Text>
               </Table.Td>
               <Table.Td>{f.thicknessMm}</Table.Td>
@@ -354,7 +392,7 @@ export function OrderDetailPage() {
                   "—"
                 )}
               </Table.Td>
-              <Table.Td>{money.format(f.basePrice)}</Table.Td>
+              <Table.Td>{f.color || "—"}</Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>

@@ -1,7 +1,25 @@
 .idea
 node_modules
 
-# локальная SQLite (путь см. docs/repository-and-production.md)
+# Local SQLite (path see docs/repository-and-production.md)
 .data/
 *.db
 *.db-journal
+
+# Build output
+dist/
+apps/api/dist/
+apps/api/web-dist/
+apps/web/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

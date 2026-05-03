@@ -120,8 +120,6 @@ export function OrdersPage() {
       customerId: "",
       deadlineAt: null,
       comment: "",
-      overridePercent: null,
-      overridePrice: null,
       facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
     },
   });
@@ -136,8 +134,6 @@ export function OrdersPage() {
       customerId: "",
       deadlineAt: null,
       comment: "",
-      overridePercent: null,
-      overridePrice: null,
       facades: [defaultFacadeRow(defs)],
     });
   }, [createOpen, millingTypes.data, coatingTypes.data, handleTypes.data, createForm]);
@@ -148,7 +144,10 @@ export function OrdersPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: orderCreate,
+    mutationFn: (v: CreateOrderFormValues) => {
+      if (!catalogReady) throw new Error("Справочники не загружены");
+      return orderCreate(buildOrderWritePayload(v, catalogReady));
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["orders"] });
       setCreateOpen(false);
@@ -156,8 +155,6 @@ export function OrdersPage() {
         customerId: "",
         deadlineAt: null,
         comment: "",
-        overridePercent: null,
-        overridePrice: null,
         facades: [defaultFacadeRow(newRowDefaults)],
       });
     },
@@ -173,9 +170,9 @@ export function OrdersPage() {
       <Table.Td>{o.customer.name}</Table.Td>
       <Table.Td>{o.currentStage.name}</Table.Td>
       <Table.Td>
-        <Text size="sm">{o.facades.length ? `${o.facades.length} поз.` : "—"}</Text>
+        <Text size="sm">{o.facadeCount} шт. ({o.facades.length} поз.)</Text>
       </Table.Td>
-      <Table.Td>{o.totalPrice != null ? money.format(o.totalPrice) : "—"}</Table.Td>
+      <Table.Td>{o.totalCost != null ? money.format(o.totalCost) : "—"}</Table.Td>
       <Table.Td>
         {canCreate ? (
           <Button size="xs" variant="light" onClick={() => setMoveFor(o.id)}>
@@ -262,8 +259,7 @@ export function OrdersPage() {
       >
         <form
           onSubmit={createForm.handleSubmit((v) => {
-            if (!catalogReady) return;
-            createMut.mutate(buildOrderWritePayload(v, catalogReady));
+            createMut.mutate(v);
           })}
         >
           {!catalogReady ? (

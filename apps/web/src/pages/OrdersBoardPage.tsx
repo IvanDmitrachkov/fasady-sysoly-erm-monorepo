@@ -137,7 +137,7 @@ export function OrdersBoardPage() {
                               {o.deadlineAt ? (
                                 <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text>
                               ) : null}
-                              <Text size="xs">{o.totalPrice != null ? money.format(o.totalPrice) : "—"}</Text>
+                              <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
                             </Stack>
                           </Group>
                         </Paper>

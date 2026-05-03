@@ -1,11 +1,15 @@
 import { z } from "zod";
 import dayjs from "dayjs";
-import {
-  computeOrderTotal,
-  estimateFacadeBasePrice,
-  type FacadePricingInput,
-} from "./facade-pricing";
 import type { OrderCreateFacadePayload, OrderDto } from "../api/orders";
+import {
+  calcFacadeAreaTotal,
+  calcFacadeCount,
+  calcFacadeCostTotal,
+  calcMillingCostTotal,
+  calcHandleCostTotal,
+  calcSubtotal,
+  calcTotalCost,
+} from "../lib/facade-pricing";
 
 export const money = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -79,8 +83,16 @@ export const createOrderFormSchema = z.object({
   customerId: z.string().min(1, "Выберите заказчика"),
   deadlineAt: z.date().nullable().optional(),
   comment: z.string().optional(),
-  overridePercent: z.number().finite().nullable().optional(),
-  overridePrice: z.number().finite().nullable().optional(),
+
+  // Новые поля цен
+  facadePricePerM2: z.number().positive().nullable().optional(),
+  millingPricePerM2: z.number().positive().nullable().optional(),
+  handleLengthTotalMm: z.number().positive().nullable().optional(),
+  handlePricePerMeter: z.number().positive().nullable().optional(),
+  otherServicesPrice: z.number().finite().nullable().optional(),
+  discount: z.number().finite().nullable().optional(),
+  advance: z.number().finite().nullable().optional(),
+
   facades: z.array(facadeRowSchema).min(1, "Добавьте хотя бы одну позицию"),
 });
 
@@ -101,28 +113,6 @@ export function defaultFacadeRow(defaults?: { millingTypeId: string; coatingType
   };
 }
 
-export function facadeRowToPricingInput(
-  row: CreateOrderFormValues["facades"][number],
-  catalog: FacadeCatalogLookup,
-): FacadePricingInput {
-  const m = catalog.millingById.get(row.millingTypeId);
-  const c = catalog.coatingById.get(row.coatingTypeId);
-  const hid = row.handleTypeId ?? null;
-  const h = hid ? catalog.handleById.get(hid) : undefined;
-  return {
-    widthMm: row.widthMm,
-    heightMm: row.heightMm,
-    thicknessMm: row.thicknessMm,
-    millingPricePerM2: m?.pricePerM2 ?? 0,
-    coatingPricePerM2: c?.pricePerM2 ?? 0,
-    handlePricePerMeter: h?.pricePerMeter ?? null,
-    handleLengthMm: hid ? row.handleLengthMm ?? null : null,
-    color: row.color,
-    edgeRadius: row.edgeRadius,
-    optionsExtra: row.optionsExtra,
-  };
-}
-
 export function buildFacadesPayload(
   facades: CreateOrderFormValues["facades"],
   catalog: FacadeCatalogLookup,
@@ -139,7 +129,7 @@ export function buildFacadesPayload(
     thicknessMm: row.thicknessMm,
     edgeRadius: row.edgeRadius ?? null,
     optionsExtra: row.optionsExtra?.trim() ? row.optionsExtra : null,
-    basePrice: estimateFacadeBasePrice(facadeRowToPricingInput(row, catalog)),
+    basePrice: 0,
   }));
 }
 
@@ -148,8 +138,13 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
     customerId: order.customer.id,
     deadlineAt: order.deadlineAt ? new Date(order.deadlineAt) : null,
     comment: order.comment ?? "",
-    overridePercent: order.overridePercent,
-    overridePrice: order.overridePrice,
+    facadePricePerM2: order.facadePricePerM2 ?? null,
+    millingPricePerM2: order.millingPricePerM2 ?? null,
+    handleLengthTotalMm: order.handleLengthTotalMm ?? null,
+    handlePricePerMeter: order.handlePricePerMeter ?? null,
+    otherServicesPrice: order.otherServicesPrice ?? null,
+    discount: order.discount ?? null,
+    advance: order.advance ?? null,
     facades: order.facades.map((f) => ({
       millingTypeId: f.millingTypeId,
       coatingTypeId: f.coatingTypeId,
@@ -165,17 +160,41 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
   };
 }
 
-export function buildOrderWritePayload(v: CreateOrderFormValues, catalog: FacadeCatalogLookup) {
-  const facadesPayload = buildFacadesPayload(v.facades, catalog);
-  const sumBase = facadesPayload.reduce((s, f) => s + f.basePrice, 0);
-  const totalPrice = computeOrderTotal(sumBase, v.overridePercent ?? null, v.overridePrice ?? null);
+export function buildOrderWritePayload(
+  v: CreateOrderFormValues,
+  catalog: FacadeCatalogLookup,
+) {
+  const facadeAreaTotal = calcFacadeAreaTotal(v.facades.map(f => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
+  const facadeCount = calcFacadeCount(v.facades);
+  const facadeCostTotal = calcFacadeCostTotal(facadeAreaTotal, v.facadePricePerM2);
+  const millingCostTotal = calcMillingCostTotal(facadeAreaTotal, v.millingPricePerM2);
+  const handleCostTotal = calcHandleCostTotal(v.handleLengthTotalMm, v.handlePricePerMeter);
+  const subtotal = calcSubtotal({
+    facadeCostTotal,
+    millingCostTotal,
+    handleCostTotal,
+    otherServicesPrice: v.otherServicesPrice,
+  });
+  const totalCost = calcTotalCost(subtotal, v.discount);
+
   return {
     customerId: v.customerId,
     deadlineAt: v.deadlineAt ? dayjs(v.deadlineAt).endOf("day").toISOString() : null,
     comment: v.comment?.trim() ? v.comment : null,
-    overridePercent: v.overridePercent ?? null,
-    overridePrice: v.overridePrice ?? null,
-    totalPrice,
-    facades: facadesPayload,
+    facadeCount,
+    facadePricePerM2: v.facadePricePerM2 ?? null,
+    facadeAreaTotal,
+    facadeCostTotal,
+    millingPricePerM2: v.millingPricePerM2 ?? null,
+    millingCostTotal,
+    handleLengthTotalMm: v.handleLengthTotalMm ?? null,
+    handlePricePerMeter: v.handlePricePerMeter ?? null,
+    handleCostTotal,
+    otherServicesPrice: v.otherServicesPrice ?? null,
+    subtotal,
+    discount: v.discount ?? null,
+    totalCost,
+    advance: v.advance ?? null,
+    facades: buildFacadesPayload(v.facades, catalog),
   };
 }
