@@ -1,22 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Badge,
   Button,
+  Card,
   Divider,
-  Grid,
   Group,
   Modal,
   Paper,
   ScrollArea,
   Select,
+  SimpleGrid,
   Stack,
   Table,
+  Tabs,
   Text,
+  ThemeIcon,
   Title,
 } from "@mantine/core";
+import {
+  IconArrowLeft,
+  IconCalendarDue,
+  IconCash,
+  IconClockHour4,
+  IconEdit,
+  IconFileDownload,
+  IconLayoutKanban,
+  IconMapPin,
+  IconPackage,
+  IconPrinter,
+  IconReceipt,
+  IconScissors,
+  IconTrash,
+  IconUser,
+} from "@tabler/icons-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
@@ -43,6 +62,41 @@ import {
   type CreateOrderFormValues,
 } from "../lib/order-form";
 import dayjs from "dayjs";
+
+function InfoCard({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Card withBorder radius="md" p="md">
+      <Group gap="xs" mb="sm">
+        <ThemeIcon variant="light" size={30} radius="md">
+          {icon}
+        </ThemeIcon>
+        <Text fw={600}>{title}</Text>
+      </Group>
+      {children}
+    </Card>
+  );
+}
+
+function Field({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <Stack gap={2}>
+      <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+        {label}
+      </Text>
+      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+        {value}
+      </Text>
+    </Stack>
+  );
+}
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -88,7 +142,7 @@ export function OrderDetailPage() {
   const catalogsReady = !!(millingTypes.data && coatingTypes.data && handleTypes.data);
 
   const newRowDefaults = useMemo(() => {
-    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "" };
+    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "", handleLabel: "" };
     return defaultsForNewFacadeRow({
       millingTypes: millingTypes.data.millingTypes,
       coatingTypes: coatingTypes.data.coatingTypes,
@@ -208,234 +262,270 @@ export function OrderDetailPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="md" wrap="wrap">
-        <Button variant="subtle" onClick={() => void navigate(-1)}>
-          ← Назад
-        </Button>
-        <Group gap="sm">
-          <Button component={Link} to="/orders" variant="light" size="sm">
-            Список
-          </Button>
-          <Button component={Link} to="/orders/board" variant="light" size="sm">
-            Канбан
-          </Button>
-          {canEdit ? (
-            <>
+      <Paper withBorder p="md" radius="lg" mb="md">
+        <Group justify="space-between" align="flex-start" wrap="wrap">
+          <Stack gap="xs">
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<IconArrowLeft size={16} />}
+              onClick={() => void navigate(-1)}
+              w="fit-content"
+            >
+              Назад
+            </Button>
+            <Group gap="sm" align="center">
+              <Title order={2}>№{o.orderNumberFormatted}</Title>
+              <Badge size="lg" variant="light">
+                {o.currentStage.name}
+              </Badge>
+            </Group>
+            <Text c="dimmed">
+              {o.customer.name}
+              {o.customer.phone?.trim() ? ` · ${o.customer.phone}` : ""}
+            </Text>
+          </Stack>
+
+          <Stack gap="sm" align="flex-end">
+            <Group gap="xs" wrap="wrap" justify="flex-end">
+              <Button component={Link} to="/orders" variant="light" size="sm">
+                Список
+              </Button>
               <Button
                 component={Link}
-                to={`/orders/${orderId}/cutting`}
-                target="_blank"
-                rel="noopener noreferrer"
+                to="/orders/board"
                 variant="light"
                 size="sm"
+                leftSection={<IconLayoutKanban size={16} />}
               >
-                Раскрой
+                Канбан
               </Button>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={async () => {
-                  const blob = await apiBlob(orderPrintXlsxPath(orderId!));
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `zakaz_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                Печать заказа
-              </Button>
-            </>
-          ) : null}
-          {isAdmin ? (
-            <Button color="red" variant="light" size="sm" onClick={() => setDeleteOpen(true)}>
-              Удалить
-            </Button>
-          ) : null}
-        </Group>
-      </Group>
-
-      <Group justify="space-between" align="flex-start" mb="lg" wrap="wrap">
-        <div>
-          <Title order={2}>№{o.orderNumberFormatted}</Title>
-          <Text c="dimmed" mt={4}>
-            {o.customer.name}
-          </Text>
-          {o.customer.phone?.trim() ? (
-            <Text c="dimmed" size="sm" mt={2}>
-              {o.customer.phone}
-            </Text>
-          ) : null}
-        </div>
-        <Stack gap="xs" align="flex-end">
-          <Badge size="lg" variant="light">
-            {o.currentStage.name}
-          </Badge>
-          {canEdit ? (
-            <Group gap="xs">
-              <Select
-                placeholder="Переместить на…"
-                data={stageOptions.filter((s) => s.value !== o.currentStage.id)}
-                value={moveStageId}
-                onChange={setMoveStageId}
-                w={220}
-                size="sm"
-              />
-              <Button
-                size="sm"
-                disabled={!moveStageId}
-                loading={moveMut.isPending}
-                onClick={() => {
-                  if (moveStageId) moveMut.mutate(moveStageId);
-                }}
-              >
-                Переместить
-              </Button>
+              {canEdit ? (
+                <>
+                  <Button
+                    component={Link}
+                    to={`/orders/${orderId}/cutting`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconScissors size={16} />}
+                  >
+                    Раскрой
+                  </Button>
+                  <Button
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconFileDownload size={16} />}
+                    onClick={async () => {
+                      const blob = await apiBlob(orderPrintXlsxPath(orderId!));
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `zakaz_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    XLSX
+                  </Button>
+                  <Button size="sm" leftSection={<IconEdit size={16} />} onClick={() => setEditOpen(true)}>
+                    Редактировать
+                  </Button>
+                </>
+              ) : null}
+              {isAdmin ? (
+                <Button
+                  color="red"
+                  variant="light"
+                  size="sm"
+                  leftSection={<IconTrash size={16} />}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Удалить
+                </Button>
+              ) : null}
             </Group>
-          ) : null}
-        </Stack>
-      </Group>
+            {canEdit ? (
+              <Group gap="xs" wrap="nowrap">
+                <Select
+                  placeholder="Переместить на…"
+                  data={stageOptions.filter((s) => s.value !== o.currentStage.id)}
+                  value={moveStageId}
+                  onChange={setMoveStageId}
+                  w={220}
+                  size="sm"
+                />
+                <Button
+                  size="sm"
+                  disabled={!moveStageId}
+                  loading={moveMut.isPending}
+                  onClick={() => {
+                    if (moveStageId) moveMut.mutate(moveStageId);
+                  }}
+                >
+                  Переместить
+                </Button>
+              </Group>
+            ) : null}
+          </Stack>
+        </Group>
+      </Paper>
 
-      <Grid gutter="md">
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <Paper withBorder p="md" radius="md">
-            <Text size="sm" c="dimmed">
-              Создан
-            </Text>
-            <Text>{dayjs(o.createdAt).format("D MMMM YYYY, HH:mm")}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Дедлайн
-            </Text>
-            <Text>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Вид работы
-            </Text>
-            <Text>{o.workType?.trim() ? o.workType : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Адрес доставки
-            </Text>
-            <Text style={{ whiteSpace: "pre-wrap" }}>{o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Количество фасадов
-            </Text>
-            <Text>{o.facadeCount} шт.</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Общая площадь
-            </Text>
-            <Text>{o.facadeAreaTotal} м²</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Стоимость фасадов
-            </Text>
-            <Text>{o.facadeCostTotal != null ? money.format(o.facadeCostTotal) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Стоимость фрезеровки
-            </Text>
-            <Text>{o.millingCostTotal != null ? money.format(o.millingCostTotal) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Стоимость ручек
-            </Text>
-            <Text>{o.handleCostTotal != null ? money.format(o.handleCostTotal) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Прочие услуги
-            </Text>
-            <Text>{o.otherServicesPrice != null ? money.format(o.otherServicesPrice) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Итого
-            </Text>
-            <Text fw={600}>{o.subtotal != null ? money.format(o.subtotal) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Скидка
-            </Text>
-            <Text>{o.discount != null ? money.format(o.discount) : "—"}</Text>
-            <Divider my="sm" />
-            <Text size="sm" c="dimmed">
-              Общая стоимость
-            </Text>
-            <Text fw={700} size="lg">
-              {o.totalCost != null ? money.format(o.totalCost) : "—"}
-            </Text>
-            {o.advance != null && (
-              <>
-                <Divider my="sm" />
-                <Text size="sm" c="dimmed">
-                  Аванс
-                </Text>
-                <Text>{money.format(o.advance)}</Text>
-              </>
-            )}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="md">
+        <Paper withBorder p="md" radius="md">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Дедлайн
+          </Text>
+          <Text fw={600}>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
+        </Paper>
+        <Paper withBorder p="md" radius="md">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Фасады
+          </Text>
+          <Text fw={600}>
+            {o.facadeCount} шт. · {o.facadeAreaTotal} м²
+          </Text>
+        </Paper>
+        <Paper withBorder p="md" radius="md">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Вид работы
+          </Text>
+          <Text fw={600}>{o.workType?.trim() ? o.workType : "—"}</Text>
+        </Paper>
+        <Paper withBorder p="md" radius="md">
+          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+            Общая стоимость
+          </Text>
+          <Text fw={700} size="lg">
+            {o.totalCost != null ? money.format(o.totalCost) : "—"}
+          </Text>
+        </Paper>
+      </SimpleGrid>
+
+      <Tabs defaultValue="overview" variant="outline" radius="md">
+        <Tabs.List mb="md">
+          <Tabs.Tab value="overview" leftSection={<IconReceipt size={16} />}>
+            Обзор
+          </Tabs.Tab>
+          <Tabs.Tab value="facades" leftSection={<IconPackage size={16} />}>
+            Фасады
+          </Tabs.Tab>
+          <Tabs.Tab value="finance" leftSection={<IconCash size={16} />}>
+            Финансы
+          </Tabs.Tab>
+          <Tabs.Tab value="time" leftSection={<IconClockHour4 size={16} />}>
+            Трудозатраты
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="overview">
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            <InfoCard title="Клиент" icon={<IconUser size={18} />}>
+              <Stack gap="sm">
+                <Field label="Заказчик" value={o.customer.name} />
+                <Field label="Телефон" value={o.customer.phone?.trim() ? o.customer.phone : "—"} />
+              </Stack>
+            </InfoCard>
+            <InfoCard title="Производство" icon={<IconCalendarDue size={18} />}>
+              <Stack gap="sm">
+                <Field label="Создан" value={dayjs(o.createdAt).format("D MMMM YYYY, HH:mm")} />
+                <Field label="Дедлайн" value={o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"} />
+                <Field label="Вид работы" value={o.workType?.trim() ? o.workType : "—"} />
+              </Stack>
+            </InfoCard>
+            <InfoCard title="Доставка" icon={<IconMapPin size={18} />}>
+              <Field label="Адрес" value={o.deliveryAddress?.trim() ? o.deliveryAddress : "—"} />
+            </InfoCard>
+            <InfoCard title="Комментарий" icon={<IconPrinter size={18} />}>
+              <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+                {o.comment?.trim() ? o.comment : "—"}
+              </Text>
+            </InfoCard>
+          </SimpleGrid>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="facades">
+          <Paper withBorder radius="md" p="md">
+            <Group justify="space-between" mb="sm">
+              <Title order={4}>Фасады</Title>
+              <Text size="sm" c="dimmed">
+                {o.facadeCount} шт. · {o.facadeAreaTotal} м²
+              </Text>
+            </Group>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>#</Table.Th>
+                  <Table.Th>Размеры</Table.Th>
+                  <Table.Th>Толщина</Table.Th>
+                  <Table.Th>Фрезеровка</Table.Th>
+                  <Table.Th>Покрытие</Table.Th>
+                  <Table.Th>Ручка</Table.Th>
+                  <Table.Th>Цвет</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {o.facades.map((f, i) => (
+                  <Table.Tr key={f.id}>
+                    <Table.Td>{i + 1}</Table.Td>
+                    <Table.Td>
+                      <Text size="sm" fw={500}>
+                        {f.widthMm} × {f.heightMm} мм
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>{f.thicknessMm} мм</Table.Td>
+                    <Table.Td>{f.millingLabel || "—"}</Table.Td>
+                    <Table.Td>{f.coatingType.name}</Table.Td>
+                    <Table.Td>
+                      {f.handleLabel?.trim() ? (
+                        <Text size="sm">
+                          {f.handleLabel}
+                          {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
+                        </Text>
+                      ) : (
+                        "—"
+                      )}
+                    </Table.Td>
+                    <Table.Td>{f.color || "—"}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
           </Paper>
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper withBorder p="md" radius="md">
-            <Text fw={600} mb="xs">
-              Комментарий
-            </Text>
-            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-              {o.comment?.trim() ? o.comment : "—"}
-            </Text>
-          </Paper>
-        </Grid.Col>
-      </Grid>
+        </Tabs.Panel>
 
-      <Group justify="space-between" mt="xl" mb="sm">
-        <Title order={4}>Фасады</Title>
-        {canEdit ? (
-          <Button onClick={() => setEditOpen(true)}>Редактировать заказ</Button>
-        ) : null}
-      </Group>
-
-      <Table striped withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>#</Table.Th>
-            <Table.Th>Размеры</Table.Th>
-            <Table.Th>Толщ.</Table.Th>
-            <Table.Th>Ручка</Table.Th>
-            <Table.Th>Цвет</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {o.facades.map((f, i) => (
-            <Table.Tr key={f.id}>
-              <Table.Td>{i + 1}</Table.Td>
-              <Table.Td>
-                <Text size="sm">
-                  {f.widthMm} × {f.heightMm} мм
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {[f.millingLabel, f.coatingType.name].filter(Boolean).join(" · ") || "—"}
-                </Text>
-              </Table.Td>
-              <Table.Td>{f.thicknessMm}</Table.Td>
-              <Table.Td>
-                {f.handleLabel?.trim() ? (
-                  <Text size="sm">
-                    {f.handleLabel}
-                    {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
+        <Tabs.Panel value="finance">
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            <InfoCard title="Расчёт" icon={<IconCash size={18} />}>
+              <Stack gap="sm">
+                <Field label="Стоимость фасадов" value={o.facadeCostTotal != null ? money.format(o.facadeCostTotal) : "—"} />
+                <Field label="Стоимость фрезеровки" value={o.millingCostTotal != null ? money.format(o.millingCostTotal) : "—"} />
+                <Field label="Стоимость ручек" value={o.handleCostTotal != null ? money.format(o.handleCostTotal) : "—"} />
+                <Field label="Прочие услуги" value={o.otherServicesPrice != null ? money.format(o.otherServicesPrice) : "—"} />
+              </Stack>
+            </InfoCard>
+            <InfoCard title="Итоги" icon={<IconReceipt size={18} />}>
+              <Stack gap="sm">
+                <Field label="Итого" value={o.subtotal != null ? money.format(o.subtotal) : "—"} />
+                <Field label="Скидка" value={o.discount != null ? money.format(o.discount) : "—"} />
+                <Divider />
+                <Group justify="space-between">
+                  <Text fw={700}>Общая стоимость</Text>
+                  <Text fw={700} size="lg">
+                    {o.totalCost != null ? money.format(o.totalCost) : "—"}
                   </Text>
-                ) : (
-                  "—"
-                )}
-              </Table.Td>
-              <Table.Td>{f.color || "—"}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+                </Group>
+                <Field label="Аванс" value={o.advance != null ? money.format(o.advance) : "—"} />
+              </Stack>
+            </InfoCard>
+          </SimpleGrid>
+        </Tabs.Panel>
 
-      <OrderTimeEntriesSection orderId={orderId!} canEdit={canEdit} />
+        <Tabs.Panel value="time">
+          <OrderTimeEntriesSection orderId={orderId!} canEdit={canEdit} />
+        </Tabs.Panel>
+      </Tabs>
 
       <Modal opened={deleteOpen} onClose={() => setDeleteOpen(false)} title="Удалить заказ">
         <Stack>

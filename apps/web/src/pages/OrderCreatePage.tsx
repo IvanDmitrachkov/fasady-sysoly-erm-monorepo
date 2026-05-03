@@ -50,7 +50,7 @@ export function OrderCreatePage() {
   const catalogsReady = !!(millingTypes.data && coatingTypes.data && handleTypes.data);
 
   const newRowDefaults = useMemo(() => {
-    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "" };
+    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "", handleLabel: "" };
     return defaultsForNewFacadeRow({
       millingTypes: millingTypes.data.millingTypes,
       coatingTypes: coatingTypes.data.coatingTypes,

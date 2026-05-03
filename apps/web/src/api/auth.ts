@@ -22,3 +22,17 @@ export async function loginRequest(email: string, password: string) {
 export async function meRequest() {
   return apiJson<{ user: UserDto & { createdAt: string } }>("/api/me");
 }
+
+export function profileUpdate(body: Partial<{
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  patronymic: string | null;
+  currentPassword: string;
+  password: string;
+}>) {
+  return apiJson<{ user: UserDto & { createdAt: string } }>("/api/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}

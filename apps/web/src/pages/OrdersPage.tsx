@@ -66,11 +66,6 @@ export function OrdersPage() {
             Канбан
           </Button>
         </Group>
-        {canCreate ? (
-          <Button component={Link} to="/orders/new">
-            Новый заказ
-          </Button>
-        ) : null}
       </Group>
 
       {orders.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
