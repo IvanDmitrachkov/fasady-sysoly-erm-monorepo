@@ -30,6 +30,7 @@ import {
   calcBalance,
   rectangleAreaM2,
 } from "../lib/facade-pricing";
+import "./OrderFormBody.css";
 
 type CatalogPriceRow = { name: string; pricePerM2: number };
 type CatalogHandleRow = { name: string; pricePerMeter: number };
@@ -200,7 +201,7 @@ export function OrderFormBody({
         )}
       />
 
-      <Group align="flex-start">
+      <Group align="flex-start" className="order-form-row">
         <div style={{ flex: 1 }}>
           <Controller
             name="deadlineAt"
@@ -239,7 +240,7 @@ export function OrderFormBody({
       <Divider label="Фасады (позиции)" labelPosition="center" />
 
       <Paper withBorder p="md">
-        <Group grow>
+        <Group grow className="order-form-row">
           <div>
             <Text size="sm">Количество фасадов</Text>
             <Text fw={600}>{pricing.count} шт.</Text>
@@ -276,173 +277,166 @@ export function OrderFormBody({
                 </Group>
               </Group>
 
-              <Stack gap="sm">
-                <Group grow align="flex-start">
-                  <Controller
-                    name={`facades.${index}.heightMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Высота, мм"
-                        min={1}
-                        decimalScale={0}
-                        thousandSeparator=" "
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.widthMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Ширина, мм"
-                        min={1}
-                        decimalScale={0}
-                        thousandSeparator=" "
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <NumberInput
-                    label="Площадь, м²"
-                    decimalScale={2}
-                    thousandSeparator=" "
-                    value={Math.round(positionArea * 100) / 100}
-                    readOnly
-                  />
-                </Group>
-                <Group grow align="flex-start">
-                  <Controller
-                    name={`facades.${index}.coatingTypeId`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Select
-                        label="Тип покрытия"
-                        placeholder="Выберите"
-                        data={coatingOptions}
-                        value={field.value || null}
-                        onChange={(v) => field.onChange(v ?? "")}
-                        error={fieldState.error?.message}
-                        searchable
-                      />
-                    )}
-                  />
-                  <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
-                </Group>
-                <Group grow align="flex-start">
-                  <Controller
-                    name={`facades.${index}.handleLabel`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Autocomplete
-                        label="Интегрированная ручка"
-                        placeholder="Выберите"
-                        data={handleNames}
-                        value={field.value ?? ""}
-                        onChange={(v) => {
-                          field.onChange(v);
-                          form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
-                          if (isNoHandleLabel(v)) {
-                            form.setValue("handleLengthTotalMm", null, { shouldValidate: true });
-                            form.setValue("handlePricePerMeter", null, { shouldValidate: true });
-                          }
-                        }}
-                        onOptionSubmit={(val) => {
-                          field.onChange(val);
-                          form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
-                          if (isNoHandleLabel(val)) {
-                            form.setValue("handleLengthTotalMm", null, { shouldValidate: true });
-                            form.setValue("handlePricePerMeter", null, { shouldValidate: true });
-                          } else {
-                            const row = handleCatalog.find((t) => t.name === val);
-                            if (row) form.setValue("handlePricePerMeter", row.pricePerMeter, { shouldValidate: true });
-                          }
-                        }}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.millingLabel`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Autocomplete
-                        label="Фрезеровка"
-                        placeholder="Начните ввод или выберите"
-                        data={millingNames}
-                        value={field.value}
-                        onChange={(v) => field.onChange(v)}
-                        onOptionSubmit={(val) => {
-                          field.onChange(val);
-                          const row = millingCatalog.find((t) => t.name === val);
-                          if (row) form.setValue("millingPricePerM2", row.pricePerM2);
-                        }}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                </Group>
-                <Group grow align="flex-start">
-                  <Controller
-                    name={`facades.${index}.thicknessMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Толщина, мм"
-                        min={1}
-                        decimalScale={1}
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.edgeRadius`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Autocomplete
-                        label="Радиус завала торца, мм"
-                        placeholder="Выберите или введите"
-                        data={EDGE_RADIUS_OPTIONS}
-                        value={field.value == null ? "" : String(field.value)}
-                        onChange={(value) => {
-                          const normalized = value.replace(",", ".").trim();
-                          const parsed = Number(normalized);
-                          field.onChange(normalized && Number.isFinite(parsed) ? parsed : undefined);
-                        }}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.quantity`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Количество"
-                        min={1}
-                        decimalScale={0}
-                        thousandSeparator=" "
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                </Group>
+              <div className="facade-position-grid">
+                <Controller
+                  name={`facades.${index}.widthMm`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Ширина, мм"
+                      min={1}
+                      decimalScale={0}
+                      thousandSeparator=" "
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.heightMm`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Высота, мм"
+                      min={1}
+                      decimalScale={0}
+                      thousandSeparator=" "
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.quantity`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Количество"
+                      min={1}
+                      decimalScale={0}
+                      thousandSeparator=" "
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <NumberInput
+                  label="Площадь, м²"
+                  decimalScale={2}
+                  thousandSeparator=" "
+                  value={Math.round(positionArea * 100) / 100}
+                  readOnly
+                />
+                <Controller
+                  name={`facades.${index}.coatingTypeId`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Select
+                      label="Тип покрытия"
+                      placeholder="Выберите"
+                      data={coatingOptions}
+                      value={field.value || null}
+                      onChange={(v) => field.onChange(v ?? "")}
+                      error={fieldState.error?.message}
+                      searchable
+                    />
+                  )}
+                />
+                <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
+                <Controller
+                  name={`facades.${index}.millingLabel`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Autocomplete
+                      label="Фрезеровка"
+                      placeholder="Начните ввод или выберите"
+                      data={millingNames}
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
+                      onOptionSubmit={(val) => {
+                        field.onChange(val);
+                        const row = millingCatalog.find((t) => t.name === val);
+                        if (row) form.setValue("millingPricePerM2", row.pricePerM2);
+                      }}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.handleLabel`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Autocomplete
+                      label="Интегрированная ручка"
+                      placeholder="Выберите"
+                      data={handleNames}
+                      value={field.value ?? ""}
+                      onChange={(v) => {
+                        field.onChange(v);
+                        form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
+                        if (isNoHandleLabel(v)) {
+                          form.setValue("handleLengthTotalMm", null, { shouldValidate: true });
+                          form.setValue("handlePricePerMeter", null, { shouldValidate: true });
+                        }
+                      }}
+                      onOptionSubmit={(val) => {
+                        field.onChange(val);
+                        form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
+                        if (isNoHandleLabel(val)) {
+                          form.setValue("handleLengthTotalMm", null, { shouldValidate: true });
+                          form.setValue("handlePricePerMeter", null, { shouldValidate: true });
+                        } else {
+                          const row = handleCatalog.find((t) => t.name === val);
+                          if (row) form.setValue("handlePricePerMeter", row.pricePerMeter, { shouldValidate: true });
+                        }
+                      }}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.thicknessMm`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <NumberInput
+                      label="Толщина, мм"
+                      min={1}
+                      decimalScale={1}
+                      value={field.value}
+                      onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`facades.${index}.edgeRadius`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Autocomplete
+                      label="Радиус завала торца, мм"
+                      placeholder="Выберите или введите"
+                      data={EDGE_RADIUS_OPTIONS}
+                      value={field.value == null ? "" : String(field.value)}
+                      onChange={(value) => {
+                        const normalized = value.replace(",", ".").trim();
+                        const parsed = Number(normalized);
+                        field.onChange(normalized && Number.isFinite(parsed) ? parsed : undefined);
+                      }}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
                 <Textarea
+                  className="facade-position-field--wide"
                   label="Доп. опции"
                   minRows={1}
                   autosize
                   {...form.register(`facades.${index}.optionsExtra`)}
                 />
-              </Stack>
+              </div>
             </Paper>
           );
         })}
@@ -464,169 +458,158 @@ export function OrderFormBody({
       <Divider label="Расчет стоимости" labelPosition="center" />
 
       <Paper withBorder p="md" radius="md">
-        <Stack gap="sm">
-          <Group grow>
-            <Controller
-              name="facadePricePerM2"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Цена фасада, ₽/м²"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <div>
-              <Text size="sm">Стоимость фасадов</Text>
-              <Text fw={600}>{money.format(pricing.facadeCostTotal)}</Text>
-            </div>
-          </Group>
+        <div className="order-pricing-grid">
+          <Controller
+            name="facadePricePerM2"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Цена фасада, ₽/м²"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <div className="order-pricing-summary">
+            <Text size="sm">Стоимость фасадов</Text>
+            <Text fw={600}>{money.format(pricing.facadeCostTotal)}</Text>
+          </div>
 
-          <Group grow>
-            <NumberInput
-              label="Площадь фрезеровки, м²"
-              decimalScale={2}
-              thousandSeparator=" "
-              value={pricing.area}
-              readOnly
-            />
-            <Controller
-              name="millingPricePerM2"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Цена фрезеровки, ₽/м²"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <NumberInput
-              label="Стоимость фрезеровки, ₽"
-              decimalScale={0}
-              thousandSeparator=" "
-              value={pricing.millingCostTotal}
-              readOnly
-            />
-          </Group>
+          <NumberInput
+            label="Площадь фрезеровки, м²"
+            decimalScale={2}
+            thousandSeparator=" "
+            value={pricing.area}
+            readOnly
+          />
+          <Controller
+            name="millingPricePerM2"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Цена фрезеровки, ₽/м²"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <NumberInput
+            label="Стоимость фрезеровки, ₽"
+            decimalScale={0}
+            thousandSeparator=" "
+            value={pricing.millingCostTotal}
+            readOnly
+          />
 
-          <Group grow>
-            <Controller
-              name="handleLengthTotalMm"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Длина ручки (общая), мм"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <Controller
-              name="handlePricePerMeter"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Цена ручки, ₽/м"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <NumberInput
-              label="Стоимость ручек, ₽"
-              decimalScale={0}
-              thousandSeparator=" "
-              value={pricing.handleCostTotal}
-              readOnly
-            />
-          </Group>
+          <Controller
+            name="handleLengthTotalMm"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Длина ручки (общая), мм"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            name="handlePricePerMeter"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Цена ручки, ₽/м"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <NumberInput
+            label="Стоимость ручек, ₽"
+            decimalScale={0}
+            thousandSeparator=" "
+            value={pricing.handleCostTotal}
+            readOnly
+          />
 
-          <Group grow>
-            <Controller
-              name="otherServicesPrice"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Прочие услуги, ₽"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </Group>
+          <Controller
+            name="otherServicesPrice"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Прочие услуги, ₽"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
 
-          <Divider />
+          <Divider className="order-pricing-divider" />
 
-          <Group grow>
-            <div>
-              <Text size="sm">Итого</Text>
-              <Text fw={600}>{money.format(pricing.subtotal)}</Text>
-            </div>
-            <Controller
-              name="discount"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Скидка, ₽"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <div>
-              <Text size="sm">Общая стоимость</Text>
-              <Text fw={700} size="lg">{money.format(pricing.totalCost)}</Text>
-            </div>
-          </Group>
-
-          <Group grow>
-            <Controller
-              name="advance"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Аванс, ₽"
-                  placeholder="0"
-                  decimalScale={0}
-                  thousandSeparator=" "
-                  value={field.value ?? undefined}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-            <div>
-              <Text size="sm">Остаток</Text>
-              <Text fw={600}>{money.format(pricing.balance)}</Text>
-            </div>
-          </Group>
-        </Stack>
+          <div className="order-pricing-summary">
+            <Text size="sm">Итого</Text>
+            <Text fw={600}>{money.format(pricing.subtotal)}</Text>
+          </div>
+          <Controller
+            name="discount"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Скидка, ₽"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <div className="order-pricing-summary order-pricing-summary--total">
+            <Text size="sm">Общая стоимость</Text>
+            <Text fw={700} size="lg">
+              {money.format(pricing.totalCost)}
+            </Text>
+          </div>
+          <Controller
+            name="advance"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Аванс, ₽"
+                placeholder="0"
+                decimalScale={0}
+                thousandSeparator=" "
+                value={field.value ?? undefined}
+                onChange={(n) => field.onChange(typeof n === "number" ? n : null)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <div className="order-pricing-summary">
+            <Text size="sm">Остаток</Text>
+            <Text fw={600}>{money.format(pricing.balance)}</Text>
+          </div>
+        </div>
       </Paper>
 
       {validationMessages.length > 0 ? (

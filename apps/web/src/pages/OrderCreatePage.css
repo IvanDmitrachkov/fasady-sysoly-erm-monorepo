@@ -1,0 +1,10 @@
+@media (max-width: 47.99em) {
+  .order-create-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .order-create-actions > * {
+    width: 100%;
+  }
+}

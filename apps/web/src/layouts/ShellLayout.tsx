@@ -131,9 +131,13 @@ export function ShellLayout() {
   const computedColorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
 
   const rel = pathBelowAdmin(pathname);
+  const newOrderNavActive = rel === "/orders/new";
   const ordersNavActive =
     rel === "/orders" ||
-    (rel.startsWith("/orders/") && !rel.startsWith("/orders/board") && !rel.startsWith("/orders/archive"));
+    (rel.startsWith("/orders/") &&
+      !newOrderNavActive &&
+      !rel.startsWith("/orders/board") &&
+      !rel.startsWith("/orders/archive"));
   const kanbanNavActive = rel === "/orders/board";
   const archiveNavActive = rel === "/orders/archive";
   const timeReportNavActive = rel === "/time-report";
@@ -540,7 +544,12 @@ export function ShellLayout() {
             icon={<IconLayoutKanban size={18} />}
           />
           {canCreateOrder ? (
-            <MobileBottomAction label="Новый заказ" to="/orders/new" icon={<IconPlus size={18} />} />
+            <MobileBottomAction
+              label="Новый заказ"
+              to="/orders/new"
+              active={newOrderNavActive}
+              icon={<IconPlus size={18} />}
+            />
           ) : null}
           <MobileBottomAction label="Открыть меню" icon={<IconMenu2 size={18} />} onClick={openMobileMenu} />
         </Group>

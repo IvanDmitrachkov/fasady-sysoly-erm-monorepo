@@ -16,6 +16,7 @@ import {
   defaultFacadeRow,
   type CreateOrderFormValues,
 } from "../lib/order-form";
+import "./OrderCreatePage.css";
 
 export function OrderCreatePage() {
   const navigate = useNavigate();
@@ -190,7 +191,7 @@ export function OrderCreatePage() {
                       {createMut.error instanceof Error ? createMut.error.message : "Ошибка"}
                     </Text>
                   ) : null}
-                  <Group justify="flex-end">
+                  <Group justify="flex-end" className="order-create-actions">
                     <Button type="button" variant="default" component={Link} to="/orders">
                       Отмена
                     </Button>
