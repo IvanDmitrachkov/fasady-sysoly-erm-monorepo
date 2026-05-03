@@ -78,7 +78,7 @@ function InfoCard({
         <ThemeIcon variant="light" size={30} radius="md">
           {icon}
         </ThemeIcon>
-        <Text fw={600}>{title}</Text>
+      <Text fw={500}>{title}</Text>
       </Group>
       {children}
     </Card>
@@ -88,7 +88,7 @@ function InfoCard({
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <Stack gap={2}>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
         {label}
       </Text>
       <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
@@ -374,27 +374,27 @@ export function OrderDetailPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="md">
         <Paper withBorder p="md" radius="md">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
             Дедлайн
           </Text>
-          <Text fw={600}>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
+          <Text fw={500}>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
         </Paper>
         <Paper withBorder p="md" radius="md">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
             Фасады
           </Text>
-          <Text fw={600}>
+          <Text fw={500}>
             {o.facadeCount} шт. · {o.facadeAreaTotal} м²
           </Text>
         </Paper>
         <Paper withBorder p="md" radius="md">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
             Вид работы
           </Text>
-          <Text fw={600}>{o.workType?.trim() ? o.workType : "—"}</Text>
+          <Text fw={500}>{o.workType?.trim() ? o.workType : "—"}</Text>
         </Paper>
         <Paper withBorder p="md" radius="md">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
             Общая стоимость
           </Text>
           <Text fw={700} size="lg">

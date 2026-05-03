@@ -14,18 +14,18 @@ const dark: MantineColorsTuple = [
   "#0a0b0e",
 ];
 
-/** Акцент: бирюза / циан (графики, CTA) */
+/** Основной акцент: дорогой холодный графит для монохромного UI. */
 const brand: MantineColorsTuple = [
-  "#e7fdf9",
-  "#c6faf1",
-  "#96f0e0",
-  "#5ee0cd",
-  "#2dd4bf",
-  "#14b8a6",
-  "#0d9488",
-  "#0f766e",
-  "#115e59",
-  "#134e4a",
+  "#f3f5f8",
+  "#e4e8ee",
+  "#cbd3df",
+  "#aeb9c8",
+  "#8795aa",
+  "#66758d",
+  "#4a5668",
+  "#343d4a",
+  "#232a34",
+  "#151a21",
 ];
 
 /** Вторичный акцент — янтарь / золото для вторых линий и метрик */
@@ -68,16 +68,16 @@ export const theme = createTheme({
     'Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   fontFamilyMonospace: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
   defaultRadius: "md",
-  /** Лёгкие тени — без «пластикового» эффекта */
+  /** Мягкие тени для светлой ERP-темы: акцент на границы, а не на глубину. */
   shadows: {
-    xs: "0 1px 2px rgba(0, 0, 0, 0.35)",
-    sm: "0 1px 3px rgba(0, 0, 0, 0.45)",
-    md: "0 4px 12px rgba(0, 0, 0, 0.45)",
-    lg: "0 8px 24px rgba(0, 0, 0, 0.5)",
-    xl: "0 12px 40px rgba(0, 0, 0, 0.55)",
+    xs: "0 1px 2px rgba(15, 23, 42, 0.04)",
+    sm: "0 2px 8px rgba(15, 23, 42, 0.06)",
+    md: "0 8px 24px rgba(15, 23, 42, 0.08)",
+    lg: "0 12px 32px rgba(15, 23, 42, 0.1)",
+    xl: "0 18px 48px rgba(15, 23, 42, 0.12)",
   },
   headings: {
-    fontWeight: "600",
+    fontWeight: "500",
     sizes: {
       h1: { fontSize: "2rem", lineHeight: "1.25" },
       h2: { fontSize: "1.5rem", lineHeight: "1.35" },
@@ -104,7 +104,6 @@ export const theme = createTheme({
     Paper: {
       defaultProps: {
         radius: "md",
-        shadow: "xs",
       },
     },
   },
