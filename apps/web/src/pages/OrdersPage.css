@@ -1,0 +1,7 @@
+.orders-mobile-card-cell {
+  min-width: 0;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  padding: 8px 10px;
+  background: var(--mantine-color-default-hover);
+}
