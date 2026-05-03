@@ -107,7 +107,8 @@ export function OrderDetailPage() {
   const [moveStageId, setMoveStageId] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
-  const canEdit = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
+  const canEditOrder = me.data?.user.role === "ADMIN";
+  const canWorkWithOrder = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
   const isAdmin = me.data?.user.role === "ADMIN";
 
   const order = useQuery({
@@ -120,23 +121,23 @@ export function OrderDetailPage() {
   const customers = useQuery({
     queryKey: ["customers"],
     queryFn: customersList,
-    enabled: canEdit && editOpen,
+    enabled: canEditOrder && editOpen,
   });
 
   const millingTypes = useQuery({
     queryKey: ["milling-types"],
     queryFn: millingTypesList,
-    enabled: canEdit && editOpen,
+    enabled: canEditOrder && editOpen,
   });
   const coatingTypes = useQuery({
     queryKey: ["coating-types"],
     queryFn: coatingTypesList,
-    enabled: canEdit && editOpen,
+    enabled: canEditOrder && editOpen,
   });
   const handleTypes = useQuery({
     queryKey: ["handle-types"],
     queryFn: handleTypesList,
-    enabled: canEdit && editOpen,
+    enabled: canEditOrder && editOpen,
   });
 
   const catalogsReady = !!(millingTypes.data && coatingTypes.data && handleTypes.data);
@@ -300,7 +301,7 @@ export function OrderDetailPage() {
               >
                 Канбан
               </Button>
-              {canEdit ? (
+              {canWorkWithOrder ? (
                 <>
                   <Button
                     component={Link}
@@ -329,10 +330,12 @@ export function OrderDetailPage() {
                   >
                     XLSX
                   </Button>
+                </>
+              ) : null}
+              {canEditOrder ? (
                   <Button size="sm" leftSection={<IconEdit size={16} />} onClick={() => setEditOpen(true)}>
                     Редактировать
                   </Button>
-                </>
               ) : null}
               {isAdmin ? (
                 <Button
@@ -346,7 +349,7 @@ export function OrderDetailPage() {
                 </Button>
               ) : null}
             </Group>
-            {canEdit ? (
+            {canWorkWithOrder ? (
               <Group gap="xs" wrap="nowrap">
                 <Select
                   placeholder="Переместить на…"
@@ -523,7 +526,7 @@ export function OrderDetailPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="time">
-          <OrderTimeEntriesSection orderId={orderId!} canEdit={canEdit} />
+          <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
         </Tabs.Panel>
       </Tabs>
 

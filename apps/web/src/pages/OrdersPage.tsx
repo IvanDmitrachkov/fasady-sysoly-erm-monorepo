@@ -1,19 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Group, Modal, Select, Stack, Table, Text, Title } from "@mantine/core";
+import { Badge, Button, Group, ScrollArea, Select, Stack, Table, Text, Title } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { orderMove, ordersList } from "../api/orders";
 import { stagesList } from "../api/stages";
 import { money } from "../lib/order-form";
+import dayjs from "dayjs";
 
 export function OrdersPage() {
   const qc = useQueryClient();
-  const [moveFor, setMoveFor] = useState<string | null>(null);
-  const [stagePick, setStagePick] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
-  const canCreate = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
+  const canMoveOrder = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
 
   const orders = useQuery({ queryKey: ["orders"], queryFn: ordersList });
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
@@ -27,35 +26,80 @@ export function OrdersPage() {
     mutationFn: ({ id, stageId }: { id: string; stageId: string }) => orderMove(id, stageId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["orders"] });
-      setMoveFor(null);
-      setStagePick(null);
     },
   });
 
-  const rows = orders.data?.orders.map((o) => (
-    <Table.Tr key={o.id}>
+  const rows = orders.data?.orders.map((o) => {
+    const balance = o.totalCost != null ? o.totalCost - (o.advance ?? 0) : null;
+    return (
+      <Table.Tr key={o.id}>
       <Table.Td>
-        <Text component={Link} to={`/orders/${o.id}`} fw={600} c="blue" style={{ textDecoration: "none" }}>
+        <Text component={Link} to={`/orders/${o.id}`} fw={500} size="sm" c="brand.6" style={{ textDecoration: "none" }}>
           №{o.orderNumberFormatted}
         </Text>
-      </Table.Td>
-      <Table.Td>{o.customer.name}</Table.Td>
-      <Table.Td>{o.currentStage.name}</Table.Td>
-      <Table.Td>
-        <Text size="sm">
-          {o.facadeCount} шт. ({o.facades.length} поз.)
+        <Text size="xs" c="dimmed">
+          {dayjs(o.createdAt).format("DD.MM.YY")}
         </Text>
       </Table.Td>
-      <Table.Td>{o.totalCost != null ? money.format(o.totalCost) : "—"}</Table.Td>
       <Table.Td>
-        {canCreate ? (
-          <Button size="xs" variant="light" onClick={() => setMoveFor(o.id)}>
-            Этап…
-          </Button>
+        <Text size="sm" lineClamp={1}>
+          {o.customer.name}
+        </Text>
+        {o.customer.phone?.trim() ? (
+          <Text size="xs" c="dimmed" lineClamp={1}>
+            {o.customer.phone}
+          </Text>
         ) : null}
       </Table.Td>
+      <Table.Td>
+        {canMoveOrder ? (
+          <Select
+            data={stageOptions}
+            value={o.currentStage.id}
+            onChange={(stageId) => {
+              if (stageId && stageId !== o.currentStage.id) {
+                moveMut.mutate({ id: o.id, stageId });
+              }
+            }}
+            size="xs"
+            variant="filled"
+            allowDeselect={false}
+            disabled={moveMut.isPending}
+            w={180}
+          />
+        ) : (
+          <Badge variant="light">{o.currentStage.name}</Badge>
+        )}
+      </Table.Td>
+      <Table.Td>
+        <Text size="sm">{o.deadlineAt ? dayjs(o.deadlineAt).format("DD.MM.YY") : "—"}</Text>
+        <Text size="xs" c="dimmed" lineClamp={1}>
+          {o.workType?.trim() ? o.workType : "вид работы не указан"}
+        </Text>
+      </Table.Td>
+      <Table.Td>
+        <Text size="sm">{o.facadeCount} шт.</Text>
+        <Text size="xs" c="dimmed">
+          {o.facades.length} поз. · {o.facadeAreaTotal} м²
+        </Text>
+      </Table.Td>
+      <Table.Td>
+        <Text size="sm">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
+        <Text size="xs" c="dimmed">
+          аванс {o.advance != null ? money.format(o.advance) : "—"}
+        </Text>
+      </Table.Td>
+      <Table.Td>
+        <Text size="sm">{balance != null ? money.format(balance) : "—"}</Text>
+      </Table.Td>
+      <Table.Td>
+        <Text size="xs" c="dimmed" lineClamp={2}>
+          {o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}
+        </Text>
+      </Table.Td>
     </Table.Tr>
-  ));
+    );
+  });
 
   return (
     <>
@@ -74,51 +118,29 @@ export function OrdersPage() {
       ) : null}
 
       {orders.data ? (
-        <Table striped highlightOnHover withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Номер</Table.Th>
-              <Table.Th>Заказчик</Table.Th>
-              <Table.Th>Этап</Table.Th>
-              <Table.Th>Фасады</Table.Th>
-              <Table.Th>Сумма</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>{rows}</Table.Tbody>
-        </Table>
+        <ScrollArea type="auto" offsetScrollbars>
+          <Table striped highlightOnHover withTableBorder verticalSpacing={6} fz="sm" miw={1100}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Номер</Table.Th>
+                <Table.Th>Заказчик</Table.Th>
+                <Table.Th>Этап</Table.Th>
+                <Table.Th>Срок / работа</Table.Th>
+                <Table.Th>Фасады</Table.Th>
+                <Table.Th>Сумма / аванс</Table.Th>
+                <Table.Th>Остаток</Table.Th>
+                <Table.Th>Доставка</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>{rows}</Table.Tbody>
+          </Table>
+        </ScrollArea>
       ) : null}
-
-      <Modal opened={!!moveFor} onClose={() => setMoveFor(null)} title="Переместить заказ">
-        <Stack>
-          <Select
-            label="Этап"
-            data={stageOptions}
-            value={stagePick}
-            onChange={setStagePick}
-            placeholder="Выберите этап"
-          />
-          <Button
-            disabled={!moveFor || !stagePick}
-            loading={moveMut.isPending}
-            onClick={() => {
-              if (moveFor && stagePick) moveMut.mutate({ id: moveFor, stageId: stagePick });
-            }}
-          >
-            Переместить
-          </Button>
-          {moveFor ? (
-            <Button component={Link} to={`/orders/${moveFor}`} variant="subtle" size="xs">
-              Открыть карточку заказа
-            </Button>
-          ) : null}
-          {moveMut.isError ? (
-            <Text c="red" size="sm">
-              {moveMut.error instanceof Error ? moveMut.error.message : "Ошибка"}
-            </Text>
-          ) : null}
-        </Stack>
-      </Modal>
+      {moveMut.isError ? (
+        <Text c="red" size="sm" mt="sm">
+          {moveMut.error instanceof Error ? moveMut.error.message : "Ошибка перемещения"}
+        </Text>
+      ) : null}
     </>
   );
 }

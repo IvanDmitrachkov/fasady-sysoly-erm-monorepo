@@ -69,11 +69,15 @@ function navIcon(icon: ReactNode, color: string) {
   );
 }
 
+const NAVBAR_COLLAPSED_KEY = "erm_navbar_collapsed";
+
 export function ShellLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [opened, { toggle }] = useDisclosure();
-  const [navbarCollapsed, setNavbarCollapsed] = useState(false);
+  const [navbarCollapsed, setNavbarCollapsed] = useState(
+    () => localStorage.getItem(NAVBAR_COLLAPSED_KEY) === "true",
+  );
   const { toggleColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
 
@@ -103,7 +107,7 @@ export function ShellLayout() {
 
   const user = me.data?.user;
   const isAdmin = user?.role === "ADMIN";
-  const canCreateOrder = user?.role === "ADMIN" || user?.role === "WORKER";
+  const canCreateOrder = user?.role === "ADMIN";
   const canTimeReport = user?.role === "ADMIN" || user?.role === "WORKER";
   const isDark = computedColorScheme === "dark";
 
@@ -181,7 +185,13 @@ export function ShellLayout() {
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                onClick={() => setNavbarCollapsed((v) => !v)}
+                onClick={() =>
+                  setNavbarCollapsed((v) => {
+                    const next = !v;
+                    localStorage.setItem(NAVBAR_COLLAPSED_KEY, String(next));
+                    return next;
+                  })
+                }
                 aria-label={navbarCollapsed ? "Развернуть меню" : "Свернуть меню"}
               >
                 {navbarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}

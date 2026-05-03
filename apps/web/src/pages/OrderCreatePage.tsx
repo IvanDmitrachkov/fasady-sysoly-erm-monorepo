@@ -23,8 +23,7 @@ export function OrderCreatePage() {
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
 
-  const canCreate =
-    me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
+  const canCreate = me.data?.user.role === "ADMIN";
 
   const customers = useQuery({
     queryKey: ["customers"],

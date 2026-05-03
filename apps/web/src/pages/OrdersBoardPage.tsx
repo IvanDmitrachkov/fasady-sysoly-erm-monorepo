@@ -11,6 +11,7 @@ import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 
 type OrdersListData = Awaited<ReturnType<typeof ordersList>>;
+type MoveVariables = { id: string; stageId: string; previous?: OrdersListData };
 
 function PreviewField({
   icon,
@@ -60,18 +61,9 @@ export function OrdersBoardPage() {
   }, [orders.data, stages.data]);
 
   const moveMut = useMutation({
-    mutationFn: ({ id, stageId }: { id: string; stageId: string }) => orderMove(id, stageId),
-    onMutate: async ({ id, stageId }) => {
-      await qc.cancelQueries({ queryKey: ["orders"] });
-      const previous = qc.getQueryData<OrdersListData>(["orders"]);
-      const nextStage = stages.data?.stages.find((s) => s.id === stageId);
-
-      if (previous && nextStage) {
-        qc.setQueryData<OrdersListData>(["orders"], {
-          orders: previous.orders.map((o) => (o.id === id ? { ...o, currentStage: nextStage } : o)),
-        });
-      }
-
+    mutationFn: ({ id, stageId }: MoveVariables) => orderMove(id, stageId),
+    onMutate: ({ previous }) => {
+      void qc.cancelQueries({ queryKey: ["orders"] });
       return { previous };
     },
     onError: (_error, _variables, context) => {
@@ -94,7 +86,17 @@ export function OrdersBoardPage() {
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId) return;
-    moveMut.mutate({ id: draggableId, stageId: destination.droppableId });
+
+    const previous = qc.getQueryData<OrdersListData>(["orders"]);
+    const nextStage = stages.data?.stages.find((s) => s.id === destination.droppableId);
+
+    if (previous && nextStage) {
+      qc.setQueryData<OrdersListData>(["orders"], {
+        orders: previous.orders.map((o) => (o.id === draggableId ? { ...o, currentStage: nextStage } : o)),
+      });
+    }
+
+    moveMut.mutate({ id: draggableId, stageId: destination.droppableId, previous });
   };
 
   const columns =

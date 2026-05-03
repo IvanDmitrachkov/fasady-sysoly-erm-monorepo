@@ -246,7 +246,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/orders",
-    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    { preHandler: [requireRoles(Role.ADMIN)] },
     async (request, reply) => {
       const parsed = createOrderBody.safeParse(request.body);
       if (!parsed.success) {
@@ -323,7 +323,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch(
     "/orders/:id",
-    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    { preHandler: [requireRoles(Role.ADMIN)] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const parsed = patchOrderBody.safeParse(request.body);
