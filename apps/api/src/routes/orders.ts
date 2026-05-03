@@ -62,6 +62,7 @@ type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude 
 const createOrderBody = z.object({
   customerId: z.string().min(1),
   deadlineAt: z.string().datetime().optional().nullable(),
+  workType: z.string().optional().nullable(),
   comment: z.string().optional().nullable(),
 
   // Новые поля цен
@@ -86,6 +87,7 @@ const createOrderBody = z.object({
 const patchOrderBody = z.object({
   customerId: z.string().min(1).optional(),
   deadlineAt: z.string().datetime().optional().nullable(),
+  workType: z.string().optional().nullable(),
   comment: z.string().optional().nullable(),
 
   // Новые поля цен
@@ -149,6 +151,7 @@ function serializeOrder(order: OrderWithRelations) {
     completedAt: order.completedAt?.toISOString() ?? null,
     deletedAt: order.deletedAt?.toISOString() ?? null,
     deadlineAt: order.deadlineAt?.toISOString() ?? null,
+    workType: order.workType,
     comment: order.comment,
 
     // Новые поля цен
@@ -274,6 +277,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
           currentStageId: newStage.id,
           completedAt: newStage.isComplete ? new Date() : null,
           deadlineAt: parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null,
+          workType: parsed.data.workType?.trim() ? parsed.data.workType.trim() : null,
           comment: parsed.data.comment ?? null,
 
           // Новые поля цен
@@ -346,6 +350,9 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (parsed.data.customerId !== undefined) data.customerId = parsed.data.customerId;
       if (parsed.data.deadlineAt !== undefined) {
         data.deadlineAt = parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null;
+      }
+      if (parsed.data.workType !== undefined) {
+        data.workType = parsed.data.workType?.trim() ? parsed.data.workType.trim() : null;
       }
       if (parsed.data.comment !== undefined) data.comment = parsed.data.comment;
 

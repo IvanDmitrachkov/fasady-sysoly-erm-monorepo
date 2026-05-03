@@ -93,6 +93,7 @@ model Order {
   completedAt         DateTime?
   deletedAt           DateTime?
   deadlineAt          DateTime?
+  workType            String?
   comment             String?
   /// * Количество фасадов штук
   facadeCount         Int         @default(0)

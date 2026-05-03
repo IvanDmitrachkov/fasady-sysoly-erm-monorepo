@@ -145,8 +145,10 @@ export function OrderFormBody({
             />
           )}
         />
-        <Textarea label="Комментарий к заказу" minRows={2} autosize {...form.register("comment")} />
+        <TextInput label="Вид работы" placeholder="Например: фасады эмаль" {...form.register("workType")} />
       </Group>
+
+      <Textarea label="Комментарий к заказу" minRows={2} autosize {...form.register("comment")} />
 
       <Divider label="Фасады (позиции)" labelPosition="center" />
 

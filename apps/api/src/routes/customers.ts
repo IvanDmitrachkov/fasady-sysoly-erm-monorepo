@@ -4,8 +4,11 @@ import { z } from "zod";
 import { authUserId, requireJwt, requireRoles } from "../auth/preHandlers.js";
 import { writeAudit } from "../lib/audit.js";
 
-const createCustomerBody = z.object({ name: z.string().min(1) });
-const patchCustomerBody = z.object({ name: z.string().min(1) });
+const createCustomerBody = z.object({
+  name: z.string().min(1),
+  phone: z.string().optional().nullable(),
+});
+const patchCustomerBody = createCustomerBody;
 
 export const customersRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireJwt);
@@ -23,7 +26,12 @@ export const customersRoutes: FastifyPluginAsync = async (app) => {
       if (!parsed.success) {
         return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
       }
-      const customer = await app.prisma.customer.create({ data: { name: parsed.data.name } });
+      const customer = await app.prisma.customer.create({
+        data: {
+          name: parsed.data.name,
+          phone: parsed.data.phone?.trim() ? parsed.data.phone.trim() : null,
+        },
+      });
       await writeAudit(
         app.prisma,
         authUserId(request),
@@ -51,7 +59,10 @@ export const customersRoutes: FastifyPluginAsync = async (app) => {
       }
       const customer = await app.prisma.customer.update({
         where: { id },
-        data: { name: parsed.data.name },
+        data: {
+          name: parsed.data.name,
+          phone: parsed.data.phone?.trim() ? parsed.data.phone.trim() : null,
+        },
       });
       await writeAudit(
         app.prisma,

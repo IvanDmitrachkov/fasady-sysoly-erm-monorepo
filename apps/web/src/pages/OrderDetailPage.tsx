@@ -122,7 +122,11 @@ export function OrderDetailPage() {
   );
 
   const customerOptions = useMemo(
-    () => (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
+    () =>
+      (customers.data?.customers ?? []).map((c) => ({
+        value: c.id,
+        label: c.phone?.trim() ? `${c.name} · ${c.phone}` : c.name,
+      })),
     [customers.data],
   );
 
@@ -136,6 +140,7 @@ export function OrderDetailPage() {
     defaultValues: {
       customerId: "",
       deadlineAt: null,
+      workType: "",
       comment: "",
       facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
@@ -255,6 +260,11 @@ export function OrderDetailPage() {
           <Text c="dimmed" mt={4}>
             {o.customer.name}
           </Text>
+          {o.customer.phone?.trim() ? (
+            <Text c="dimmed" size="sm" mt={2}>
+              {o.customer.phone}
+            </Text>
+          ) : null}
         </div>
         <Stack gap="xs" align="flex-end">
           <Badge size="lg" variant="light">
@@ -297,6 +307,11 @@ export function OrderDetailPage() {
               Дедлайн
             </Text>
             <Text>{o.deadlineAt ? dayjs(o.deadlineAt).format("D MMMM YYYY") : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Вид работы
+            </Text>
+            <Text>{o.workType?.trim() ? o.workType : "—"}</Text>
             <Divider my="sm" />
             <Text size="sm" c="dimmed">
               Количество фасадов

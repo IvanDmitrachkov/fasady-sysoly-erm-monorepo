@@ -8,8 +8,11 @@ import { z } from "zod";
 import { meRequest } from "../api/auth";
 import { customerCreate, customerUpdate, customersList } from "../api/customers";
 
-const nameSchema = z.object({ name: z.string().min(1, "Введите название") });
-type NameForm = z.infer<typeof nameSchema>;
+const customerSchema = z.object({
+  name: z.string().min(1, "Введите название"),
+  phone: z.string().optional(),
+});
+type CustomerForm = z.infer<typeof customerSchema>;
 
 export function CustomersPage() {
   const qc = useQueryClient();
@@ -22,30 +25,38 @@ export function CustomersPage() {
     enabled: me.data?.user.role === "ADMIN",
   });
 
-  const createForm = useForm<NameForm>({
-    resolver: zodResolver(nameSchema),
-    defaultValues: { name: "" },
+  const createForm = useForm<CustomerForm>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: { name: "", phone: "" },
   });
 
-  const editForm = useForm<NameForm>({
-    resolver: zodResolver(nameSchema),
-    defaultValues: { name: "" },
+  const editForm = useForm<CustomerForm>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: { name: "", phone: "" },
   });
 
   const createMut = useMutation({
-    mutationFn: (name: string) => customerCreate(name),
+    mutationFn: (body: CustomerForm) =>
+      customerCreate({
+        name: body.name.trim(),
+        phone: body.phone?.trim() ? body.phone.trim() : null,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["customers"] });
-      createForm.reset({ name: "" });
+      createForm.reset({ name: "", phone: "" });
     },
   });
 
   const patchMut = useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => customerUpdate(id, name),
+    mutationFn: ({ id, body }: { id: string; body: CustomerForm }) =>
+      customerUpdate(id, {
+        name: body.name.trim(),
+        phone: body.phone?.trim() ? body.phone.trim() : null,
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["customers"] });
       setEditId(null);
-      editForm.reset({ name: "" });
+      editForm.reset({ name: "", phone: "" });
     },
   });
 
@@ -67,7 +78,7 @@ export function CustomersPage() {
 
       <form
         onSubmit={createForm.handleSubmit((v) => {
-          createMut.mutate(v.name.trim());
+          createMut.mutate(v);
         })}
       >
         <Group align="flex-end" mb="xl">
@@ -77,6 +88,13 @@ export function CustomersPage() {
             style={{ flex: 1, maxWidth: 400 }}
             {...createForm.register("name")}
             error={createForm.formState.errors.name?.message}
+          />
+          <TextInput
+            label="Телефон"
+            placeholder="+7 ..."
+            style={{ flex: 1, maxWidth: 260 }}
+            {...createForm.register("phone")}
+            error={createForm.formState.errors.phone?.message}
           />
           <Button type="submit" loading={createMut.isPending}>
             Добавить
@@ -99,6 +117,7 @@ export function CustomersPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Название</Table.Th>
+              <Table.Th>Телефон</Table.Th>
               <Table.Th w={140} />
             </Table.Tr>
           </Table.Thead>
@@ -106,13 +125,14 @@ export function CustomersPage() {
             {list.data.customers.map((c) => (
               <Table.Tr key={c.id}>
                 <Table.Td>{c.name}</Table.Td>
+                <Table.Td>{c.phone?.trim() ? c.phone : "—"}</Table.Td>
                 <Table.Td>
                   <Button
                     size="xs"
                     variant="subtle"
                     onClick={() => {
                       setEditId(c.id);
-                      editForm.reset({ name: c.name });
+                      editForm.reset({ name: c.name, phone: c.phone ?? "" });
                     }}
                   >
                     Переименовать
@@ -127,11 +147,12 @@ export function CustomersPage() {
       <Modal opened={!!editId} onClose={() => setEditId(null)} title="Переименовать заказчика">
         <form
           onSubmit={editForm.handleSubmit((v) => {
-            if (editId) patchMut.mutate({ id: editId, name: v.name.trim() });
+            if (editId) patchMut.mutate({ id: editId, body: v });
           })}
         >
           <Stack>
             <TextInput label="Название" {...editForm.register("name")} error={editForm.formState.errors.name?.message} />
+            <TextInput label="Телефон" {...editForm.register("phone")} error={editForm.formState.errors.phone?.message} />
             {patchMut.isError ? (
               <Text c="red" size="sm">
                 {patchMut.error instanceof Error ? patchMut.error.message : "Ошибка"}

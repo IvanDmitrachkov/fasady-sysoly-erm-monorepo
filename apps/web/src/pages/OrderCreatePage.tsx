@@ -84,7 +84,11 @@ export function OrderCreatePage() {
   );
 
   const customerOptions = useMemo(
-    () => (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
+    () =>
+      (customers.data?.customers ?? []).map((c) => ({
+        value: c.id,
+        label: c.phone?.trim() ? `${c.name} · ${c.phone}` : c.name,
+      })),
     [customers.data],
   );
 
@@ -93,6 +97,7 @@ export function OrderCreatePage() {
     defaultValues: {
       customerId: "",
       deadlineAt: null,
+      workType: "",
       comment: "",
       facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
@@ -107,6 +112,7 @@ export function OrderCreatePage() {
     createForm.reset({
       customerId: "",
       deadlineAt: null,
+      workType: "",
       comment: "",
       facades: [defaultFacadeRow(defs)],
     });

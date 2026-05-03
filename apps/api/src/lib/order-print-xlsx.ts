@@ -84,6 +84,7 @@ export async function buildOrderPrintXlsxBuffer(order: OrderForPrint): Promise<B
   ws.getCell("G3").value = order.customer.phone ?? "";
   ws.getCell("C4").value = formatDateRu(order.deadlineAt);
   ws.getCell("G4").value = order.comment?.trim() ?? "";
+  ws.getCell("C5").value = order.workType?.trim() ?? "";
 
   const sorted = [...order.facades].sort((a, b) => a.sortIndex - b.sortIndex);
   if (sorted.length > LAST_LINE_ROW - FIRST_LINE_ROW + 1) {
