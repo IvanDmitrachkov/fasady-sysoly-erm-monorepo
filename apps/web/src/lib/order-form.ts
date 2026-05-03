@@ -17,41 +17,23 @@ export const money = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
 
-export type FacadeCatalogLookup = {
-  millingById: Map<string, { pricePerM2: number }>;
-  coatingById: Map<string, { pricePerM2: number }>;
-  handleById: Map<string, { pricePerMeter: number }>;
-};
-
-export function buildCatalogLookup(data: {
-  millingTypes: { id: string; pricePerM2: number }[];
-  coatingTypes: { id: string; pricePerM2: number }[];
-  handleTypes: { id: string; pricePerMeter: number }[];
-}): FacadeCatalogLookup {
-  return {
-    millingById: new Map(data.millingTypes.map((t) => [t.id, { pricePerM2: t.pricePerM2 }])),
-    coatingById: new Map(data.coatingTypes.map((t) => [t.id, { pricePerM2: t.pricePerM2 }])),
-    handleById: new Map(data.handleTypes.map((t) => [t.id, { pricePerMeter: t.pricePerMeter }])),
-  };
-}
-
-export function defaultCatalogIds(data: {
-  millingTypes: { id: string; slug: string }[];
+export function defaultsForNewFacadeRow(data: {
+  millingTypes: { slug: string; name: string }[];
   coatingTypes: { id: string; slug: string }[];
-}): { millingTypeId: string; coatingTypeId: string } {
+}): { millingLabel: string; coatingTypeId: string } {
   const millingNone = data.millingTypes.find((t) => t.slug === "none");
   const coatingNone = data.coatingTypes.find((t) => t.slug === "none");
   return {
-    millingTypeId: millingNone?.id ?? data.millingTypes[0]?.id ?? "",
+    millingLabel: millingNone?.name ?? data.millingTypes[0]?.name ?? "",
     coatingTypeId: coatingNone?.id ?? data.coatingTypes[0]?.id ?? "",
   };
 }
 
 const facadeRowSchema = z
   .object({
-    millingTypeId: z.string().min(1, "Выберите тип фрезеровки"),
+    millingLabel: z.string(),
     coatingTypeId: z.string().min(1, "Выберите тип покрытия"),
-    handleTypeId: z.string().nullable().optional(),
+    handleLabel: z.string().optional(),
     handleLengthMm: z.number().positive().nullable().optional(),
     color: z.string(),
     widthMm: z.number().positive("Ширина > 0"),
@@ -61,8 +43,15 @@ const facadeRowSchema = z
     optionsExtra: z.string().optional(),
   })
   .superRefine((row, ctx) => {
-    const hid = row.handleTypeId ?? null;
-    if (hid) {
+    if (!row.millingLabel.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Укажите фрезеровку",
+        path: ["millingLabel"],
+      });
+    }
+    const hl = row.handleLabel?.trim() ?? "";
+    if (hl) {
       if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -73,7 +62,7 @@ const facadeRowSchema = z
     } else if (row.handleLengthMm != null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Без типа ручки не указывайте длину",
+        message: "Без ручки не указывайте длину",
         path: ["handleLengthMm"],
       });
     }
@@ -98,11 +87,13 @@ export const createOrderFormSchema = z.object({
 
 export type CreateOrderFormValues = z.infer<typeof createOrderFormSchema>;
 
-export function defaultFacadeRow(defaults?: { millingTypeId: string; coatingTypeId: string }): CreateOrderFormValues["facades"][number] {
+export function defaultFacadeRow(
+  defaults?: { millingLabel: string; coatingTypeId: string },
+): CreateOrderFormValues["facades"][number] {
   return {
-    millingTypeId: defaults?.millingTypeId ?? "",
+    millingLabel: defaults?.millingLabel ?? "",
     coatingTypeId: defaults?.coatingTypeId ?? "",
-    handleTypeId: null,
+    handleLabel: "",
     handleLengthMm: null,
     color: "",
     widthMm: 720,
@@ -113,24 +104,24 @@ export function defaultFacadeRow(defaults?: { millingTypeId: string; coatingType
   };
 }
 
-export function buildFacadesPayload(
-  facades: CreateOrderFormValues["facades"],
-  catalog: FacadeCatalogLookup,
-): OrderCreateFacadePayload[] {
-  return facades.map((row, i) => ({
-    sortIndex: i,
-    millingTypeId: row.millingTypeId,
-    coatingTypeId: row.coatingTypeId,
-    handleTypeId: row.handleTypeId ?? null,
-    handleLengthMm: row.handleTypeId ? row.handleLengthMm ?? null : null,
-    color: row.color,
-    widthMm: row.widthMm,
-    heightMm: row.heightMm,
-    thicknessMm: row.thicknessMm,
-    edgeRadius: row.edgeRadius ?? null,
-    optionsExtra: row.optionsExtra?.trim() ? row.optionsExtra : null,
-    basePrice: 0,
-  }));
+export function buildFacadesPayload(facades: CreateOrderFormValues["facades"]): OrderCreateFacadePayload[] {
+  return facades.map((row, i) => {
+    const hl = row.handleLabel?.trim() ?? "";
+    return {
+      sortIndex: i,
+      millingLabel: row.millingLabel.trim(),
+      coatingTypeId: row.coatingTypeId,
+      handleLabel: hl || null,
+      handleLengthMm: hl ? row.handleLengthMm ?? null : null,
+      color: row.color,
+      widthMm: row.widthMm,
+      heightMm: row.heightMm,
+      thicknessMm: row.thicknessMm,
+      edgeRadius: row.edgeRadius ?? null,
+      optionsExtra: row.optionsExtra?.trim() ? row.optionsExtra : null,
+      basePrice: 0,
+    };
+  });
 }
 
 export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
@@ -146,9 +137,9 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
     discount: order.discount ?? null,
     advance: order.advance ?? null,
     facades: order.facades.map((f) => ({
-      millingTypeId: f.millingTypeId,
+      millingLabel: f.millingLabel,
       coatingTypeId: f.coatingTypeId,
-      handleTypeId: f.handleTypeId ?? null,
+      handleLabel: f.handleLabel ?? "",
       handleLengthMm: f.handleLengthMm ?? null,
       color: f.color,
       widthMm: f.widthMm,
@@ -160,11 +151,8 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
   };
 }
 
-export function buildOrderWritePayload(
-  v: CreateOrderFormValues,
-  catalog: FacadeCatalogLookup,
-) {
-  const facadeAreaTotal = calcFacadeAreaTotal(v.facades.map(f => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
+export function buildOrderWritePayload(v: CreateOrderFormValues) {
+  const facadeAreaTotal = calcFacadeAreaTotal(v.facades.map((f) => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
   const facadeCount = calcFacadeCount(v.facades);
   const facadeCostTotal = calcFacadeCostTotal(facadeAreaTotal, v.facadePricePerM2);
   const millingCostTotal = calcMillingCostTotal(facadeAreaTotal, v.millingPricePerM2);
@@ -195,6 +183,6 @@ export function buildOrderWritePayload(
     discount: v.discount ?? null,
     totalCost,
     advance: v.advance ?? null,
-    facades: buildFacadesPayload(v.facades, catalog),
+    facades: buildFacadesPayload(v.facades),
   };
 }

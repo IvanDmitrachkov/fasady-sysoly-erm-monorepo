@@ -8,9 +8,9 @@ import { formatOrderNumber } from "../lib/order-number.js";
 const facadeItem = z
   .object({
     sortIndex: z.number().int().optional(),
-    millingTypeId: z.string().min(1),
+    millingLabel: z.string(),
     coatingTypeId: z.string().min(1),
-    handleTypeId: z.string().min(1).nullable().optional(),
+    handleLabel: z.string().nullable().optional(),
     handleLengthMm: z.number().positive().nullable().optional(),
     color: z.string(),
     widthMm: z.number().positive(),
@@ -21,8 +21,16 @@ const facadeItem = z
     basePrice: z.number().optional(),
   })
   .superRefine((row, ctx) => {
-    const hid = row.handleTypeId ?? null;
-    if (hid) {
+    const ml = row.millingLabel.trim();
+    if (!ml) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Укажите фрезеровку",
+        path: ["millingLabel"],
+      });
+    }
+    const hl = row.handleLabel?.trim() ?? "";
+    if (hl) {
       if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -33,7 +41,7 @@ const facadeItem = z
     } else if (row.handleLengthMm != null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Длина ручки задаётся только при выбранном типе ручки",
+        message: "Длина ручки задаётся только если указана ручка",
         path: ["handleLengthMm"],
       });
     }
@@ -44,7 +52,7 @@ const orderInclude = {
   currentStage: true,
   facades: {
     orderBy: { sortIndex: "asc" as const },
-    include: { millingType: true, coatingType: true, handleType: true },
+    include: { coatingType: true },
   },
 } as const;
 type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
@@ -110,30 +118,16 @@ function serializeFacade(f: OrderWithRelations["facades"][number]) {
   return {
     id: f.id,
     sortIndex: f.sortIndex,
-    millingTypeId: f.millingTypeId,
+    millingLabel: f.millingLabel,
     coatingTypeId: f.coatingTypeId,
-    handleTypeId: f.handleTypeId,
+    handleLabel: f.handleLabel,
     handleLengthMm: f.handleLengthMm,
-    millingType: {
-      id: f.millingType.id,
-      slug: f.millingType.slug,
-      name: f.millingType.name,
-      pricePerM2: f.millingType.pricePerM2,
-    },
     coatingType: {
       id: f.coatingType.id,
       slug: f.coatingType.slug,
       name: f.coatingType.name,
       pricePerM2: f.coatingType.pricePerM2,
     },
-    handleType: f.handleType
-      ? {
-          id: f.handleType.id,
-          slug: f.handleType.slug,
-          name: f.handleType.name,
-          pricePerMeter: f.handleType.pricePerMeter,
-        }
-      : null,
     color: f.color,
     widthMm: f.widthMm,
     heightMm: f.heightMm,
@@ -176,13 +170,13 @@ function serializeOrder(order: OrderWithRelations) {
 }
 
 function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
-  const handleTypeId = f.handleTypeId ?? null;
+  const handleLabel = f.handleLabel?.trim() ? f.handleLabel.trim() : null;
   return {
     sortIndex: f.sortIndex ?? index,
-    millingTypeId: f.millingTypeId,
+    millingLabel: f.millingLabel.trim(),
     coatingTypeId: f.coatingTypeId,
-    handleTypeId,
-    handleLengthMm: handleTypeId ? f.handleLengthMm ?? null : null,
+    handleLabel,
+    handleLengthMm: handleLabel ? f.handleLengthMm ?? null : null,
     color: f.color,
     widthMm: f.widthMm,
     heightMm: f.heightMm,
@@ -193,30 +187,15 @@ function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
   };
 }
 
-async function validateFacadeCatalogRefs(
+async function validateFacadeCoatingRefs(
   prisma: PrismaClient,
   facades: z.infer<typeof facadeItem>[],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const millingIds = [...new Set(facades.map((f) => f.millingTypeId))];
   const coatingIds = [...new Set(facades.map((f) => f.coatingTypeId))];
-  const handleIds = [...new Set(facades.map((f) => f.handleTypeId).filter((id): id is string => !!id))];
-
-  const [millings, coatings, handles] = await Promise.all([
-    prisma.millingType.findMany({ where: { id: { in: millingIds } } }),
-    prisma.coatingType.findMany({ where: { id: { in: coatingIds } } }),
-    handleIds.length ? prisma.handleType.findMany({ where: { id: { in: handleIds } } }) : Promise.resolve([]),
-  ]);
-
-  if (millings.length !== millingIds.length) {
-    return { ok: false, message: "Неизвестный тип фрезеровки" };
-  }
+  const coatings = await prisma.coatingType.findMany({ where: { id: { in: coatingIds } } });
   if (coatings.length !== coatingIds.length) {
     return { ok: false, message: "Неизвестный тип покрытия" };
   }
-  if (handles.length !== handleIds.length) {
-    return { ok: false, message: "Неизвестный тип ручки" };
-  }
-
   return { ok: true };
 }
 
@@ -260,7 +239,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
       }
 
-      const cat = await validateFacadeCatalogRefs(app.prisma, parsed.data.facades);
+      const cat = await validateFacadeCoatingRefs(app.prisma, parsed.data.facades);
       if (!cat.ok) {
         return reply.code(400).send({ error: cat.message });
       }
@@ -341,7 +320,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       }
 
       if (parsed.data.facades !== undefined) {
-        const cat = await validateFacadeCatalogRefs(app.prisma, parsed.data.facades);
+        const cat = await validateFacadeCoatingRefs(app.prisma, parsed.data.facades);
         if (!cat.ok) {
           return reply.code(400).send({ error: cat.message });
         }

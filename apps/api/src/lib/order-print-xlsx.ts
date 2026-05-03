@@ -12,7 +12,7 @@ const orderIncludeForPrint = {
   currentStage: true,
   facades: {
     orderBy: { sortIndex: "asc" as const },
-    include: { millingType: true, coatingType: true, handleType: true },
+    include: { coatingType: true },
   },
 } as const;
 
@@ -45,17 +45,18 @@ function formatDateRu(d: Date | null | undefined): string {
 }
 
 function handleCellText(f: OrderForPrint["facades"][number]): string {
-  if (f.handleType && f.handleLengthMm != null && f.handleLengthMm > 0) {
-    return `${f.handleType.name}, ${f.handleLengthMm} мм`;
+  const hl = f.handleLabel?.trim() ?? "";
+  if (hl && f.handleLengthMm != null && f.handleLengthMm > 0) {
+    return `${hl}, ${f.handleLengthMm} мм`;
   }
-  if (f.handleType) {
-    return f.handleType.name;
+  if (hl) {
+    return hl;
   }
   return "нет";
 }
 
 function millingCoatingText(f: OrderForPrint["facades"][number]): string {
-  const parts = [f.millingType.name];
+  const parts = [f.millingLabel.trim() || "—"];
   if (f.coatingType.slug !== "none") {
     parts.push(f.coatingType.name);
   }
@@ -80,7 +81,7 @@ export async function buildOrderPrintXlsxBuffer(order: OrderForPrint): Promise<B
   ws.getCell("C2").value = numFormatted;
   ws.getCell("G2").value = order.customer.name;
   ws.getCell("C3").value = formatDateRu(order.createdAt);
-  ws.getCell("G3").value = "";
+  ws.getCell("G3").value = order.customer.phone ?? "";
   ws.getCell("C4").value = formatDateRu(order.deadlineAt);
   ws.getCell("G4").value = order.comment?.trim() ?? "";
 
@@ -114,6 +115,17 @@ export async function buildOrderPrintXlsxBuffer(order: OrderForPrint): Promise<B
     ws.getCell(`H${r}`).value = null;
     ws.getCell(`I${r}`).value = null;
   }
+
+  // Итоговые поля (колонка J)
+  ws.getCell("J53").value = order.facadeAreaTotal ?? 0;
+  ws.getCell("J54").value = order.facadePricePerM2 ?? 0;
+  ws.getCell("J57").value = order.millingCostTotal ?? 0;
+  ws.getCell("J58").value = order.handlePricePerMeter ?? 0;
+  ws.getCell("J59").value = order.handleLengthTotalMm != null ? order.handleLengthTotalMm / 1000 : 0;
+  ws.getCell("J60").value = order.otherServicesPrice ?? 0;
+  ws.getCell("J62").value = order.discount ?? 0;
+  ws.getCell("J64").value = order.advance ?? 0;
+  ws.getCell("J66").value = order.facadeCount ?? 0;
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);

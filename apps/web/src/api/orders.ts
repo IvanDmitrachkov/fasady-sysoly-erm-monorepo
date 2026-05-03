@@ -11,23 +11,14 @@ export type FacadeTypeSnippet = {
   pricePerM2: number;
 };
 
-export type HandleTypeSnippet = {
-  id: string;
-  slug: string;
-  name: string;
-  pricePerMeter: number;
-};
-
 export type FacadeDto = {
   id: string;
   sortIndex: number;
-  millingTypeId: string;
+  millingLabel: string;
   coatingTypeId: string;
-  handleTypeId: string | null;
+  handleLabel: string | null;
   handleLengthMm: number | null;
-  millingType: FacadeTypeSnippet;
   coatingType: FacadeTypeSnippet;
-  handleType: HandleTypeSnippet | null;
   color: string;
   widthMm: number;
   heightMm: number;
@@ -79,9 +70,9 @@ export function orderMove(orderId: string, stageId: string) {
 
 export type OrderCreateFacadePayload = {
   sortIndex?: number;
-  millingTypeId: string;
+  millingLabel: string;
   coatingTypeId: string;
-  handleTypeId?: string | null;
+  handleLabel?: string | null;
   handleLengthMm?: number | null;
   color: string;
   widthMm: number;

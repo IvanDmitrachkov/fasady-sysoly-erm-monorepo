@@ -118,10 +118,6 @@ export const facadeTypesRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ error: "Не найдено" });
       }
-      const cnt = await app.prisma.facade.count({ where: { millingTypeId: id } });
-      if (cnt > 0) {
-        return reply.code(400).send({ error: `Нельзя удалить: используется в ${cnt} поз.` });
-      }
       await app.prisma.millingType.delete({ where: { id } });
       await writeAudit(app.prisma, authUserId(request), "millingType.delete", `Удалён тип фрезеровки «${existing.name}»`, "MillingType", id);
       return reply.code(204).send();
@@ -291,10 +287,6 @@ export const facadeTypesRoutes: FastifyPluginAsync = async (app) => {
       const existing = await app.prisma.handleType.findUnique({ where: { id } });
       if (!existing) {
         return reply.code(404).send({ error: "Не найдено" });
-      }
-      const cnt = await app.prisma.facade.count({ where: { handleTypeId: id } });
-      if (cnt > 0) {
-        return reply.code(400).send({ error: `Нельзя удалить: используется в ${cnt} поз.` });
       }
       await app.prisma.handleType.delete({ where: { id } });
       await writeAudit(app.prisma, authUserId(request), "handleType.delete", `Удалён тип ручки «${existing.name}»`, "HandleType", id);

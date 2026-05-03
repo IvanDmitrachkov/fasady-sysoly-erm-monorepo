@@ -27,10 +27,9 @@ import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
-  buildCatalogLookup,
   buildOrderWritePayload,
   createOrderFormSchema,
-  defaultCatalogIds,
+  defaultsForNewFacadeRow,
   defaultFacadeRow,
   money,
   orderDtoToFormValues,
@@ -77,31 +76,33 @@ export function OrderDetailPage() {
     enabled: canEdit && editOpen,
   });
 
-  const catalogReady =
-    millingTypes.data && coatingTypes.data && handleTypes.data
-      ? buildCatalogLookup({
-          millingTypes: millingTypes.data.millingTypes,
-          coatingTypes: coatingTypes.data.coatingTypes,
-          handleTypes: handleTypes.data.handleTypes,
-        })
-      : null;
+  const catalogsReady = !!(millingTypes.data && coatingTypes.data && handleTypes.data);
 
   const newRowDefaults = useMemo(() => {
-    if (!millingTypes.data || !coatingTypes.data) return { millingTypeId: "", coatingTypeId: "" };
-    return defaultCatalogIds({
+    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "" };
+    return defaultsForNewFacadeRow({
       millingTypes: millingTypes.data.millingTypes,
       coatingTypes: coatingTypes.data.coatingTypes,
     });
   }, [millingTypes.data, coatingTypes.data]);
 
-  const millingOptions = useMemo(
+  const millingCatalog = useMemo(
     () =>
       (millingTypes.data?.millingTypes ?? []).map((t) => ({
-        value: t.id,
-        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+        name: t.name,
+        pricePerM2: t.pricePerM2,
       })),
     [millingTypes.data],
   );
+  const handleCatalog = useMemo(
+    () =>
+      (handleTypes.data?.handleTypes ?? []).map((t) => ({
+        name: t.name,
+        pricePerMeter: t.pricePerMeter,
+      })),
+    [handleTypes.data],
+  );
+
   const coatingOptions = useMemo(
     () =>
       (coatingTypes.data?.coatingTypes ?? []).map((t) => ({
@@ -109,14 +110,6 @@ export function OrderDetailPage() {
         label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
       })),
     [coatingTypes.data],
-  );
-  const handleOptions = useMemo(
-    () =>
-      (handleTypes.data?.handleTypes ?? []).map((t) => ({
-        value: t.id,
-        label: `${t.name} (${t.pricePerMeter.toLocaleString("ru-RU")} ₽/м)`,
-      })),
-    [handleTypes.data],
   );
 
   const customerOptions = useMemo(
@@ -135,7 +128,7 @@ export function OrderDetailPage() {
       customerId: "",
       deadlineAt: null,
       comment: "",
-      facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
+      facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
   });
 
@@ -378,14 +371,14 @@ export function OrderDetailPage() {
                   {f.widthMm} × {f.heightMm} мм
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {[f.millingType.name, f.coatingType.name].filter(Boolean).join(" · ") || "—"}
+                  {[f.millingLabel, f.coatingType.name].filter(Boolean).join(" · ") || "—"}
                 </Text>
               </Table.Td>
               <Table.Td>{f.thicknessMm}</Table.Td>
               <Table.Td>
-                {f.handleType ? (
+                {f.handleLabel?.trim() ? (
                   <Text size="sm">
-                    {f.handleType.name}
+                    {f.handleLabel}
                     {f.handleLengthMm != null ? `, ${f.handleLengthMm} мм` : ""}
                   </Text>
                 ) : (
@@ -410,11 +403,11 @@ export function OrderDetailPage() {
       >
         <form
           onSubmit={editForm.handleSubmit((v) => {
-            if (!catalogReady) return;
-            updateMut.mutate(buildOrderWritePayload(v, catalogReady));
+            if (!catalogsReady) return;
+            updateMut.mutate(buildOrderWritePayload(v));
           })}
         >
-          {!catalogReady ? (
+          {!catalogsReady ? (
             <Text c="dimmed" size="sm">
               Загрузка справочников…
             </Text>
@@ -425,10 +418,9 @@ export function OrderDetailPage() {
               append={append}
               remove={remove}
               customerOptions={customerOptions}
-              catalog={catalogReady}
-              millingOptions={millingOptions}
+              millingCatalog={millingCatalog}
               coatingOptions={coatingOptions}
-              handleOptions={handleOptions}
+              handleCatalog={handleCatalog}
               newRowDefaults={newRowDefaults}
               actions={
                 <>

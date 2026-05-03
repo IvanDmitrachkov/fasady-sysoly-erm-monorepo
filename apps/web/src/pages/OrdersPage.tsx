@@ -11,10 +11,9 @@ import { orderCreate, orderMove, ordersList } from "../api/orders";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import {
-  buildCatalogLookup,
   buildOrderWritePayload,
   createOrderFormSchema,
-  defaultCatalogIds,
+  defaultsForNewFacadeRow,
   defaultFacadeRow,
   type CreateOrderFormValues,
   money,
@@ -53,31 +52,33 @@ export function OrdersPage() {
     enabled: canCreate && createOpen,
   });
 
-  const catalogReady =
-    millingTypes.data && coatingTypes.data && handleTypes.data
-      ? buildCatalogLookup({
-          millingTypes: millingTypes.data.millingTypes,
-          coatingTypes: coatingTypes.data.coatingTypes,
-          handleTypes: handleTypes.data.handleTypes,
-        })
-      : null;
+  const catalogsReady = !!(millingTypes.data && coatingTypes.data && handleTypes.data);
 
   const newRowDefaults = useMemo(() => {
-    if (!millingTypes.data || !coatingTypes.data) return { millingTypeId: "", coatingTypeId: "" };
-    return defaultCatalogIds({
+    if (!millingTypes.data || !coatingTypes.data) return { millingLabel: "", coatingTypeId: "" };
+    return defaultsForNewFacadeRow({
       millingTypes: millingTypes.data.millingTypes,
       coatingTypes: coatingTypes.data.coatingTypes,
     });
   }, [millingTypes.data, coatingTypes.data]);
 
-  const millingOptions = useMemo(
+  const millingCatalog = useMemo(
     () =>
       (millingTypes.data?.millingTypes ?? []).map((t) => ({
-        value: t.id,
-        label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
+        name: t.name,
+        pricePerM2: t.pricePerM2,
       })),
     [millingTypes.data],
   );
+  const handleCatalog = useMemo(
+    () =>
+      (handleTypes.data?.handleTypes ?? []).map((t) => ({
+        name: t.name,
+        pricePerMeter: t.pricePerMeter,
+      })),
+    [handleTypes.data],
+  );
+
   const coatingOptions = useMemo(
     () =>
       (coatingTypes.data?.coatingTypes ?? []).map((t) => ({
@@ -85,14 +86,6 @@ export function OrdersPage() {
         label: `${t.name} (${t.pricePerM2.toLocaleString("ru-RU")} ₽/м²)`,
       })),
     [coatingTypes.data],
-  );
-  const handleOptions = useMemo(
-    () =>
-      (handleTypes.data?.handleTypes ?? []).map((t) => ({
-        value: t.id,
-        label: `${t.name} (${t.pricePerMeter.toLocaleString("ru-RU")} ₽/м)`,
-      })),
-    [handleTypes.data],
   );
 
   const customerOptions = useMemo(
@@ -120,13 +113,13 @@ export function OrdersPage() {
       customerId: "",
       deadlineAt: null,
       comment: "",
-      facades: [defaultFacadeRow({ millingTypeId: "", coatingTypeId: "" })],
+      facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
   });
 
   useEffect(() => {
     if (!createOpen || !millingTypes.data || !coatingTypes.data || !handleTypes.data) return;
-    const defs = defaultCatalogIds({
+    const defs = defaultsForNewFacadeRow({
       millingTypes: millingTypes.data.millingTypes,
       coatingTypes: coatingTypes.data.coatingTypes,
     });
@@ -145,8 +138,8 @@ export function OrdersPage() {
 
   const createMut = useMutation({
     mutationFn: (v: CreateOrderFormValues) => {
-      if (!catalogReady) throw new Error("Справочники не загружены");
-      return orderCreate(buildOrderWritePayload(v, catalogReady));
+      if (!catalogsReady) throw new Error("Справочники не загружены");
+      return orderCreate(buildOrderWritePayload(v));
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["orders"] });
@@ -262,7 +255,7 @@ export function OrdersPage() {
             createMut.mutate(v);
           })}
         >
-          {!catalogReady ? (
+          {!catalogsReady ? (
             <Text c="dimmed" size="sm">
               Загрузка справочников фрезеровки / покрытия / ручки…
             </Text>
@@ -273,10 +266,9 @@ export function OrdersPage() {
               append={append}
               remove={remove}
               customerOptions={customerOptions}
-              catalog={catalogReady}
-              millingOptions={millingOptions}
+              millingCatalog={millingCatalog}
               coatingOptions={coatingOptions}
-              handleOptions={handleOptions}
+              handleCatalog={handleCatalog}
               newRowDefaults={newRowDefaults}
               actions={
                 <>

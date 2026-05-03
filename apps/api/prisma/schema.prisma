@@ -10,6 +10,7 @@ datasource db {
 model Customer {
   id        String   @id @default(uuid())
   name      String
+  phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
@@ -47,7 +48,7 @@ model Stage {
   timeEntries TimeEntry[]
 }
 
-/// * Тип фрезеровки, цена за м² площади фасада.
+/// * Тип фрезеровки (справочник для подсказок), цена за м² — ориентир.
 model MillingType {
   id         String   @id @default(uuid())
   slug       String   @unique
@@ -57,7 +58,6 @@ model MillingType {
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  facades    Facade[]
 }
 
 /// * Тип покрытия, цена за м².
@@ -73,7 +73,7 @@ model CoatingType {
   facades    Facade[]
 }
 
-/// * Тип интегрированной ручки, цена за погонный метр.
+/// * Тип интегрированной ручки (справочник для подсказок), цена за п.м. — ориентир.
 model HandleType {
   id            String   @id @default(uuid())
   slug          String   @unique
@@ -83,7 +83,6 @@ model HandleType {
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  facades       Facade[]
 }
 
 model Order {
@@ -153,10 +152,12 @@ model Facade {
   widthMm        Float
   heightMm       Float
   thicknessMm    Float
-  millingTypeId  String
+  /// * Фрезеровка (текст позиции; может совпадать со справочником или быть своим).
+  millingLabel   String      @default("")
   coatingTypeId  String
-  handleTypeId   String?
-  /// * Длина интегрированной ручки, мм (если выбран тип ручки).
+  /// * Интегрированная ручка (текст); null — без ручки.
+  handleLabel    String?
+  /// * Длина интегрированной ручки, мм (если указана ручка).
   handleLengthMm Float?
   edgeRadius     Float?
   optionsExtra   String?
@@ -164,9 +165,7 @@ model Facade {
   basePrice      Float
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  handleType     HandleType? @relation(fields: [handleTypeId], references: [id], onDelete: Restrict)
   coatingType    CoatingType @relation(fields: [coatingTypeId], references: [id])
-  millingType    MillingType @relation(fields: [millingTypeId], references: [id])
   order          Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 

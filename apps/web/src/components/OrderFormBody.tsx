@@ -3,6 +3,7 @@ import { Controller, type UseFormReturn, useWatch } from "react-hook-form";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   ActionIcon,
+  Autocomplete,
   Button,
   Divider,
   Group,
@@ -16,7 +17,7 @@ import {
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useMemo } from "react";
-import type { CreateOrderFormValues, FacadeCatalogLookup } from "../lib/order-form";
+import type { CreateOrderFormValues } from "../lib/order-form";
 import { defaultFacadeRow, money } from "../lib/order-form";
 import {
   calcFacadeAreaTotal,
@@ -29,7 +30,8 @@ import {
   calcBalance,
 } from "../lib/facade-pricing";
 
-const HANDLE_NONE = "__none__";
+type CatalogPriceRow = { name: string; pricePerM2: number };
+type CatalogHandleRow = { name: string; pricePerMeter: number };
 
 type OrderFormBodyProps = {
   form: UseFormReturn<CreateOrderFormValues>;
@@ -37,11 +39,10 @@ type OrderFormBodyProps = {
   append: (v: CreateOrderFormValues["facades"][number]) => void;
   remove: (index: number) => void;
   customerOptions: { value: string; label: string }[];
-  catalog: FacadeCatalogLookup;
-  millingOptions: { value: string; label: string }[];
+  millingCatalog: CatalogPriceRow[];
   coatingOptions: { value: string; label: string }[];
-  handleOptions: { value: string; label: string }[];
-  newRowDefaults: { millingTypeId: string; coatingTypeId: string };
+  handleCatalog: CatalogHandleRow[];
+  newRowDefaults: { millingLabel: string; coatingTypeId: string };
   actions: React.ReactNode;
 };
 
@@ -51,10 +52,9 @@ export function OrderFormBody({
   append,
   remove,
   customerOptions,
-  catalog,
-  millingOptions,
+  millingCatalog,
   coatingOptions,
-  handleOptions,
+  handleCatalog,
   newRowDefaults,
   actions,
 }: OrderFormBodyProps) {
@@ -72,10 +72,8 @@ export function OrderFormBody({
     ],
   });
 
-  const handleSelectData = useMemo(
-    () => [{ value: HANDLE_NONE, label: "Нет" }, ...handleOptions],
-    [handleOptions],
-  );
+  const millingNames = useMemo(() => millingCatalog.map((t) => t.name), [millingCatalog]);
+  const handleNames = useMemo(() => handleCatalog.map((t) => t.name), [handleCatalog]);
 
   const pricing = useMemo(() => {
     const area = calcFacadeAreaTotal((watchedFacades ?? []).map(f => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
@@ -166,7 +164,7 @@ export function OrderFormBody({
 
       <Stack gap="sm">
         {fields.map((fItem, index) => {
-          const handleId = watchedFacades?.[index]?.handleTypeId ?? null;
+          const handleHas = !!(watchedFacades?.[index]?.handleLabel ?? "").trim();
           return (
             <Paper key={fItem.id} withBorder p="md" radius="md">
               <Group justify="space-between" mb="xs">
@@ -191,17 +189,22 @@ export function OrderFormBody({
               <Stack gap="sm">
                 <Group grow align="flex-start">
                   <Controller
-                    name={`facades.${index}.millingTypeId`}
+                    name={`facades.${index}.millingLabel`}
                     control={form.control}
                     render={({ field, fieldState }) => (
-                      <Select
-                        label="Тип фрезеровки"
-                        placeholder="Выберите"
-                        data={millingOptions}
-                        value={field.value || null}
-                        onChange={(v) => field.onChange(v ?? "")}
+                      <Autocomplete
+                        label="Фрезеровка"
+                        description="Подсказки из справочника или свой текст"
+                        placeholder="Начните ввод или выберите"
+                        data={millingNames}
+                        value={field.value}
+                        onChange={(v) => field.onChange(v)}
+                        onOptionSubmit={(val) => {
+                          field.onChange(val);
+                          const row = millingCatalog.find((t) => t.name === val);
+                          if (row) form.setValue("millingPricePerM2", row.pricePerM2);
+                        }}
                         error={fieldState.error?.message}
-                        searchable
                       />
                     )}
                   />
@@ -290,27 +293,31 @@ export function OrderFormBody({
                 />
                 <Group grow align="flex-start">
                   <Controller
-                    name={`facades.${index}.handleTypeId`}
+                    name={`facades.${index}.handleLabel`}
                     control={form.control}
                     render={({ field, fieldState }) => (
-                      <Select
+                      <Autocomplete
                         label="Интегрированная ручка"
-                        description="Цена за п.м. задаётся в справочнике"
-                        data={handleSelectData}
-                        value={field.value ?? HANDLE_NONE}
+                        description="Подсказки из справочника или свой текст; оставьте пустым, если нет"
+                        placeholder="Нет"
+                        data={handleNames}
+                        value={field.value ?? ""}
                         onChange={(v) => {
-                          const next = v === HANDLE_NONE || !v ? null : v;
-                          field.onChange(next);
-                          if (!next) {
+                          field.onChange(v);
+                          if (!(v ?? "").trim()) {
                             form.setValue(`facades.${index}.handleLengthMm`, null, { shouldValidate: true });
                           }
                         }}
+                        onOptionSubmit={(val) => {
+                          field.onChange(val);
+                          const row = handleCatalog.find((t) => t.name === val);
+                          if (row) form.setValue("handlePricePerMeter", row.pricePerMeter);
+                        }}
                         error={fieldState.error?.message}
-                        searchable
                       />
                     )}
                   />
-                  {handleId ? (
+                  {handleHas ? (
                     <Controller
                       name={`facades.${index}.handleLengthMm`}
                       control={form.control}

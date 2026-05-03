@@ -4,10 +4,10 @@ export type FacadePricingInput = {
   widthMm: number;
   heightMm: number;
   thicknessMm: number;
-  millingTypeId: string;
+  millingLabel: string;
   coatingTypeId: string;
   millingPricePerM2?: number;
-  handleTypeId?: string | null;
+  handleLabel?: string | null;
   handleLengthMm?: number | null;
   color: string;
   edgeRadius?: number | null;
