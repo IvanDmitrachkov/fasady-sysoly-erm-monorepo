@@ -126,6 +126,7 @@ export function OrderDetailPage() {
       (customers.data?.customers ?? []).map((c) => ({
         value: c.id,
         label: c.phone?.trim() ? `${c.name} · ${c.phone}` : c.name,
+        deliveryAddress: c.deliveryAddress,
       })),
     [customers.data],
   );
@@ -141,6 +142,7 @@ export function OrderDetailPage() {
       customerId: "",
       deadlineAt: null,
       workType: "",
+      deliveryAddress: "",
       comment: "",
       facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
@@ -312,6 +314,11 @@ export function OrderDetailPage() {
               Вид работы
             </Text>
             <Text>{o.workType?.trim() ? o.workType : "—"}</Text>
+            <Divider my="sm" />
+            <Text size="sm" c="dimmed">
+              Адрес доставки
+            </Text>
+            <Text style={{ whiteSpace: "pre-wrap" }}>{o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}</Text>
             <Divider my="sm" />
             <Text size="sm" c="dimmed">
               Количество фасадов

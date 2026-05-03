@@ -84,6 +84,7 @@ export const createOrderFormSchema = z.object({
   customerId: z.string().min(1, "Выберите заказчика"),
   deadlineAt: z.date().nullable().optional(),
   workType: z.string().optional(),
+  deliveryAddress: z.string().optional(),
   comment: z.string().optional(),
 
   // Новые поля цен
@@ -146,6 +147,7 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
     customerId: order.customer.id,
     deadlineAt: order.deadlineAt ? new Date(order.deadlineAt) : null,
     workType: order.workType ?? "",
+    deliveryAddress: order.deliveryAddress ?? "",
     comment: order.comment ?? "",
     facadePricePerM2: order.facadePricePerM2 ?? null,
     millingPricePerM2: order.millingPricePerM2 ?? null,
@@ -187,6 +189,7 @@ export function buildOrderWritePayload(v: CreateOrderFormValues) {
     customerId: v.customerId,
     deadlineAt: v.deadlineAt ? dayjs(v.deadlineAt).endOf("day").toISOString() : null,
     workType: v.workType?.trim() ? v.workType.trim() : null,
+    deliveryAddress: v.deliveryAddress?.trim() ? v.deliveryAddress.trim() : null,
     comment: v.comment?.trim() ? v.comment : null,
     facadeCount,
     facadePricePerM2: v.facadePricePerM2 ?? null,

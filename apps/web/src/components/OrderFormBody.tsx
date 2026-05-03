@@ -39,7 +39,7 @@ type OrderFormBodyProps = {
   fields: FieldArrayWithId<CreateOrderFormValues, "facades", "id">[];
   append: (v: CreateOrderFormValues["facades"][number]) => void;
   remove: (index: number) => void;
-  customerOptions: { value: string; label: string }[];
+  customerOptions: { value: string; label: string; deliveryAddress: string | null }[];
   millingCatalog: CatalogPriceRow[];
   coatingOptions: { value: string; label: string }[];
   handleCatalog: CatalogHandleRow[];
@@ -122,7 +122,11 @@ export function OrderFormBody({
             placeholder="Выберите"
             data={customerOptions}
             value={field.value || null}
-            onChange={(val) => field.onChange(val ?? "")}
+                        onChange={(val) => {
+                          field.onChange(val ?? "");
+                          const customer = customerOptions.find((c) => c.value === val);
+                          form.setValue("deliveryAddress", customer?.deliveryAddress ?? "");
+                        }}
             error={fieldState.error?.message}
             searchable
           />
@@ -147,6 +151,14 @@ export function OrderFormBody({
         />
         <TextInput label="Вид работы" placeholder="Например: фасады эмаль" {...form.register("workType")} />
       </Group>
+
+      <Textarea
+        label="Адрес доставки"
+        minRows={2}
+        autosize
+        placeholder="Заполнится из карточки заказчика, можно изменить"
+        {...form.register("deliveryAddress")}
+      />
 
       <Textarea label="Комментарий к заказу" minRows={2} autosize {...form.register("comment")} />
 

@@ -83,7 +83,7 @@ export async function buildOrderPrintXlsxBuffer(order: OrderForPrint): Promise<B
   ws.getCell("C3").value = formatDateRu(order.createdAt);
   ws.getCell("G3").value = order.customer.phone ?? "";
   ws.getCell("C4").value = formatDateRu(order.deadlineAt);
-  ws.getCell("G4").value = order.comment?.trim() ?? "";
+  ws.getCell("G4").value = order.deliveryAddress?.trim() ?? "";
   ws.getCell("C5").value = order.workType?.trim() ?? "";
 
   const sorted = [...order.facades].sort((a, b) => a.sortIndex - b.sortIndex);

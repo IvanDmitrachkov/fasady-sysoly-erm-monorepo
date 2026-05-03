@@ -7,6 +7,7 @@ import { writeAudit } from "../lib/audit.js";
 const createCustomerBody = z.object({
   name: z.string().min(1),
   phone: z.string().optional().nullable(),
+  deliveryAddress: z.string().optional().nullable(),
 });
 const patchCustomerBody = createCustomerBody;
 
@@ -30,6 +31,7 @@ export const customersRoutes: FastifyPluginAsync = async (app) => {
         data: {
           name: parsed.data.name,
           phone: parsed.data.phone?.trim() ? parsed.data.phone.trim() : null,
+          deliveryAddress: parsed.data.deliveryAddress?.trim() ? parsed.data.deliveryAddress.trim() : null,
         },
       });
       await writeAudit(
@@ -62,6 +64,7 @@ export const customersRoutes: FastifyPluginAsync = async (app) => {
         data: {
           name: parsed.data.name,
           phone: parsed.data.phone?.trim() ? parsed.data.phone.trim() : null,
+          deliveryAddress: parsed.data.deliveryAddress?.trim() ? parsed.data.deliveryAddress.trim() : null,
         },
       });
       await writeAudit(

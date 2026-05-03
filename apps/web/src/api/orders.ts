@@ -1,7 +1,12 @@
 import { apiJson } from "./http";
 import type { StageDto } from "./stages";
 
-export type CustomerDto = { id: string; name: string; phone: string | null };
+export type CustomerDto = {
+  id: string;
+  name: string;
+  phone: string | null;
+  deliveryAddress: string | null;
+};
 export type { StageDto };
 
 export type FacadeTypeSnippet = {
@@ -37,6 +42,7 @@ export type OrderDto = {
   deletedAt: string | null;
   deadlineAt: string | null;
   workType: string | null;
+  deliveryAddress: string | null;
   comment: string | null;
 
   // Новые поля цен
@@ -90,6 +96,7 @@ export function orderCreate(body: {
   customerId: string;
   deadlineAt?: string | null;
   workType?: string | null;
+  deliveryAddress?: string | null;
   comment?: string | null;
   facadeCount?: number;
   facadePricePerM2?: number | null;
@@ -121,6 +128,7 @@ export type OrderUpdatePayload = {
   customerId?: string;
   deadlineAt?: string | null;
   workType?: string | null;
+  deliveryAddress?: string | null;
   comment?: string | null;
   facadeCount?: number;
   facadePricePerM2?: number | null;

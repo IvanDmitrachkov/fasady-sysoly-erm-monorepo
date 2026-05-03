@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
-  users     User[]
+  id              String   @id @default(uuid())
+  name            String
+  phone           String?
+  deliveryAddress String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  orders          Order[]
+  users           User[]
 }
 
 model User {
@@ -94,6 +95,7 @@ model Order {
   deletedAt           DateTime?
   deadlineAt          DateTime?
   workType            String?
+  deliveryAddress     String?
   comment             String?
   /// * Количество фасадов штук
   facadeCount         Int         @default(0)

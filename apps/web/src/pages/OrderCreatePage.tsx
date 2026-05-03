@@ -88,6 +88,7 @@ export function OrderCreatePage() {
       (customers.data?.customers ?? []).map((c) => ({
         value: c.id,
         label: c.phone?.trim() ? `${c.name} · ${c.phone}` : c.name,
+        deliveryAddress: c.deliveryAddress,
       })),
     [customers.data],
   );
@@ -98,6 +99,7 @@ export function OrderCreatePage() {
       customerId: "",
       deadlineAt: null,
       workType: "",
+      deliveryAddress: "",
       comment: "",
       facades: [defaultFacadeRow({ millingLabel: "", coatingTypeId: "" })],
     },
@@ -113,6 +115,7 @@ export function OrderCreatePage() {
       customerId: "",
       deadlineAt: null,
       workType: "",
+      deliveryAddress: "",
       comment: "",
       facades: [defaultFacadeRow(defs)],
     });

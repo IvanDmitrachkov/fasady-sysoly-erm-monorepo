@@ -11,6 +11,7 @@ import { customerCreate, customerUpdate, customersList } from "../api/customers"
 const customerSchema = z.object({
   name: z.string().min(1, "Введите название"),
   phone: z.string().optional(),
+  deliveryAddress: z.string().optional(),
 });
 type CustomerForm = z.infer<typeof customerSchema>;
 
@@ -27,12 +28,12 @@ export function CustomersPage() {
 
   const createForm = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    defaultValues: { name: "", phone: "" },
+    defaultValues: { name: "", phone: "", deliveryAddress: "" },
   });
 
   const editForm = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    defaultValues: { name: "", phone: "" },
+    defaultValues: { name: "", phone: "", deliveryAddress: "" },
   });
 
   const createMut = useMutation({
@@ -40,10 +41,11 @@ export function CustomersPage() {
       customerCreate({
         name: body.name.trim(),
         phone: body.phone?.trim() ? body.phone.trim() : null,
+        deliveryAddress: body.deliveryAddress?.trim() ? body.deliveryAddress.trim() : null,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["customers"] });
-      createForm.reset({ name: "", phone: "" });
+      createForm.reset({ name: "", phone: "", deliveryAddress: "" });
     },
   });
 
@@ -52,11 +54,12 @@ export function CustomersPage() {
       customerUpdate(id, {
         name: body.name.trim(),
         phone: body.phone?.trim() ? body.phone.trim() : null,
+        deliveryAddress: body.deliveryAddress?.trim() ? body.deliveryAddress.trim() : null,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["customers"] });
       setEditId(null);
-      editForm.reset({ name: "", phone: "" });
+      editForm.reset({ name: "", phone: "", deliveryAddress: "" });
     },
   });
 
@@ -96,6 +99,13 @@ export function CustomersPage() {
             {...createForm.register("phone")}
             error={createForm.formState.errors.phone?.message}
           />
+          <TextInput
+            label="Адрес доставки"
+            placeholder="Город, улица, дом"
+            style={{ flex: 1, minWidth: 260 }}
+            {...createForm.register("deliveryAddress")}
+            error={createForm.formState.errors.deliveryAddress?.message}
+          />
           <Button type="submit" loading={createMut.isPending}>
             Добавить
           </Button>
@@ -118,6 +128,7 @@ export function CustomersPage() {
             <Table.Tr>
               <Table.Th>Название</Table.Th>
               <Table.Th>Телефон</Table.Th>
+              <Table.Th>Адрес доставки</Table.Th>
               <Table.Th w={140} />
             </Table.Tr>
           </Table.Thead>
@@ -126,13 +137,18 @@ export function CustomersPage() {
               <Table.Tr key={c.id}>
                 <Table.Td>{c.name}</Table.Td>
                 <Table.Td>{c.phone?.trim() ? c.phone : "—"}</Table.Td>
+                <Table.Td>{c.deliveryAddress?.trim() ? c.deliveryAddress : "—"}</Table.Td>
                 <Table.Td>
                   <Button
                     size="xs"
                     variant="subtle"
                     onClick={() => {
                       setEditId(c.id);
-                      editForm.reset({ name: c.name, phone: c.phone ?? "" });
+                      editForm.reset({
+                        name: c.name,
+                        phone: c.phone ?? "",
+                        deliveryAddress: c.deliveryAddress ?? "",
+                      });
                     }}
                   >
                     Переименовать
@@ -153,6 +169,11 @@ export function CustomersPage() {
           <Stack>
             <TextInput label="Название" {...editForm.register("name")} error={editForm.formState.errors.name?.message} />
             <TextInput label="Телефон" {...editForm.register("phone")} error={editForm.formState.errors.phone?.message} />
+            <TextInput
+              label="Адрес доставки"
+              {...editForm.register("deliveryAddress")}
+              error={editForm.formState.errors.deliveryAddress?.message}
+            />
             {patchMut.isError ? (
               <Text c="red" size="sm">
                 {patchMut.error instanceof Error ? patchMut.error.message : "Ошибка"}
