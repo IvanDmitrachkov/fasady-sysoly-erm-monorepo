@@ -3,6 +3,7 @@
 export type FacadePricingInput = {
   widthMm: number;
   heightMm: number;
+  quantity?: number | null;
   thicknessMm: number;
   millingLabel: string;
   coatingTypeId: string;
@@ -20,14 +21,18 @@ export function rectangleAreaM2(widthMm: number, heightMm: number): number {
   return (widthMm * heightMm) / 1_000_000;
 }
 
+function normalizedQuantity(quantity: number | null | undefined): number {
+  return Number.isFinite(quantity) && quantity != null && quantity > 0 ? quantity : 1;
+}
+
 /** Суммарная площадь всех фасадов. */
-export function calcFacadeAreaTotal(facades: { widthMm: number; heightMm: number }[]): number {
-  return facades.reduce((sum, f) => sum + rectangleAreaM2(f.widthMm, f.heightMm), 0);
+export function calcFacadeAreaTotal(facades: { widthMm: number; heightMm: number; quantity?: number | null }[]): number {
+  return facades.reduce((sum, f) => sum + rectangleAreaM2(f.widthMm, f.heightMm) * normalizedQuantity(f.quantity), 0);
 }
 
 /** Количество фасадов штук. */
-export function calcFacadeCount(facades: unknown[]): number {
-  return facades.length;
+export function calcFacadeCount(facades: { quantity?: number | null }[]): number {
+  return facades.reduce((sum, f) => sum + normalizedQuantity(f.quantity), 0);
 }
 
 /** Стоимость прямых фасадов, руб. = площадь * цена за кв.м. */

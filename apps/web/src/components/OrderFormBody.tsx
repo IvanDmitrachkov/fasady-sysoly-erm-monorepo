@@ -28,6 +28,7 @@ import {
   calcSubtotal,
   calcTotalCost,
   calcBalance,
+  rectangleAreaM2,
 } from "../lib/facade-pricing";
 
 type CatalogPriceRow = { name: string; pricePerM2: number };
@@ -54,6 +55,7 @@ const ERROR_LABELS: Record<string, string> = {
   color: "Цвет",
   widthMm: "Ширина, мм",
   heightMm: "Высота, мм",
+  quantity: "Количество",
   thicknessMm: "Толщина, мм",
   edgeRadius: "Радиус завала, мм",
   optionsExtra: "Доп. опции",
@@ -140,7 +142,9 @@ export function OrderFormBody({
   const validationMessages = collectValidationMessages(form.formState.errors);
 
   const pricing = useMemo(() => {
-    const area = calcFacadeAreaTotal((watchedFacades ?? []).map(f => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
+    const area = calcFacadeAreaTotal(
+      (watchedFacades ?? []).map((f) => ({ widthMm: f.widthMm, heightMm: f.heightMm, quantity: f.quantity })),
+    );
     const count = calcFacadeCount(watchedFacades ?? []);
     const facadePricePerM2 = watchedPrices?.[0];
     const millingPricePerM2 = watchedPrices?.[1];
@@ -249,6 +253,8 @@ export function OrderFormBody({
 
       <Stack gap="sm">
         {fields.map((fItem, index) => {
+          const facade = watchedFacades?.[index];
+          const positionArea = rectangleAreaM2(facade?.widthMm ?? 0, facade?.heightMm ?? 0) * (facade?.quantity ?? 1);
           return (
             <Paper key={fItem.id} withBorder p="md" radius="md">
               <Group justify="space-between" mb="xs">
@@ -273,24 +279,44 @@ export function OrderFormBody({
               <Stack gap="sm">
                 <Group grow align="flex-start">
                   <Controller
-                    name={`facades.${index}.millingLabel`}
+                    name={`facades.${index}.heightMm`}
                     control={form.control}
                     render={({ field, fieldState }) => (
-                      <Autocomplete
-                        label="Фрезеровка"
-                        placeholder="Начните ввод или выберите"
-                        data={millingNames}
+                      <NumberInput
+                        label="Высота, мм"
+                        min={1}
+                        decimalScale={0}
+                        thousandSeparator=" "
                         value={field.value}
-                        onChange={(v) => field.onChange(v)}
-                        onOptionSubmit={(val) => {
-                          field.onChange(val);
-                          const row = millingCatalog.find((t) => t.name === val);
-                          if (row) form.setValue("millingPricePerM2", row.pricePerM2);
-                        }}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
                         error={fieldState.error?.message}
                       />
                     )}
                   />
+                  <Controller
+                    name={`facades.${index}.widthMm`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Ширина, мм"
+                        min={1}
+                        decimalScale={0}
+                        thousandSeparator=" "
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <NumberInput
+                    label="Площадь, м²"
+                    decimalScale={2}
+                    thousandSeparator=" "
+                    value={Math.round(positionArea * 100) / 100}
+                    readOnly
+                  />
+                </Group>
+                <Group grow align="flex-start">
                   <Controller
                     name={`facades.${index}.coatingTypeId`}
                     control={form.control}
@@ -308,76 +334,6 @@ export function OrderFormBody({
                   />
                   <TextInput label="Цвет" {...form.register(`facades.${index}.color`)} />
                 </Group>
-                <Group grow align="flex-start">
-                  <Controller
-                    name={`facades.${index}.widthMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Ширина, мм"
-                        min={1}
-                        decimalScale={0}
-                        thousandSeparator=" "
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.heightMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Высота, мм"
-                        min={1}
-                        decimalScale={0}
-                        thousandSeparator=" "
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : undefined)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.thicknessMm`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <NumberInput
-                        label="Толщина, мм"
-                        min={1}
-                        decimalScale={1}
-                        value={field.value}
-                        onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`facades.${index}.edgeRadius`}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Autocomplete
-                        label="Радиус завала, мм"
-                        placeholder="Выберите или введите"
-                        data={EDGE_RADIUS_OPTIONS}
-                        value={field.value == null ? "" : String(field.value)}
-                        onChange={(value) => {
-                          const normalized = value.replace(",", ".").trim();
-                          const parsed = Number(normalized);
-                          field.onChange(normalized && Number.isFinite(parsed) ? parsed : undefined);
-                        }}
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                </Group>
-                <Textarea
-                  label="Доп. опции"
-                  minRows={1}
-                  autosize
-                  {...form.register(`facades.${index}.optionsExtra`)}
-                />
                 <Group grow align="flex-start">
                   <Controller
                     name={`facades.${index}.handleLabel`}
@@ -411,7 +367,81 @@ export function OrderFormBody({
                       />
                     )}
                   />
+                  <Controller
+                    name={`facades.${index}.millingLabel`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Autocomplete
+                        label="Фрезеровка"
+                        placeholder="Начните ввод или выберите"
+                        data={millingNames}
+                        value={field.value}
+                        onChange={(v) => field.onChange(v)}
+                        onOptionSubmit={(val) => {
+                          field.onChange(val);
+                          const row = millingCatalog.find((t) => t.name === val);
+                          if (row) form.setValue("millingPricePerM2", row.pricePerM2);
+                        }}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
                 </Group>
+                <Group grow align="flex-start">
+                  <Controller
+                    name={`facades.${index}.thicknessMm`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Толщина, мм"
+                        min={1}
+                        decimalScale={1}
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : 16)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.edgeRadius`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Autocomplete
+                        label="Радиус завала торца, мм"
+                        placeholder="Выберите или введите"
+                        data={EDGE_RADIUS_OPTIONS}
+                        value={field.value == null ? "" : String(field.value)}
+                        onChange={(value) => {
+                          const normalized = value.replace(",", ".").trim();
+                          const parsed = Number(normalized);
+                          field.onChange(normalized && Number.isFinite(parsed) ? parsed : undefined);
+                        }}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`facades.${index}.quantity`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <NumberInput
+                        label="Количество"
+                        min={1}
+                        decimalScale={0}
+                        thousandSeparator=" "
+                        value={field.value}
+                        onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                </Group>
+                <Textarea
+                  label="Доп. опции"
+                  minRows={1}
+                  autosize
+                  {...form.register(`facades.${index}.optionsExtra`)}
+                />
               </Stack>
             </Paper>
           );

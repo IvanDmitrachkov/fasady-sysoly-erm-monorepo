@@ -47,6 +47,7 @@ export type SalesReportDto = {
     color: string;
     widthMm: number;
     heightMm: number;
+    quantity: number;
     thicknessMm: number;
     areaM2: number;
   }[];

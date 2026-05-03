@@ -11,6 +11,7 @@ export type FacadeForCutting = {
   sortIndex: number;
   widthMm: number;
   heightMm: number;
+  quantity?: number | null;
   thicknessMm: number;
 };
 
@@ -74,6 +75,10 @@ function toItem(f: FacadeForCutting): Item | null {
     w,
     h,
   };
+}
+
+function normalizedQuantity(quantity: number | null | undefined): number {
+  return Number.isFinite(quantity) && quantity != null && quantity > 0 ? quantity : 1;
 }
 
 function orientationsForSheet(it: Item, innerW: number, innerH: number): Ori[] {
@@ -202,7 +207,12 @@ export function computeCuttingPlan(input: {
           reason: "Некорректные ширина или высота (мм)",
         });
       } else {
-        items.push(p);
+        for (let i = 0; i < normalizedQuantity(f.quantity); i++) {
+          items.push({
+            ...p,
+            label: normalizedQuantity(f.quantity) > 1 ? `${p.label}.${i + 1}` : p.label,
+          });
+        }
       }
     }
     const packed = packShelf(items);

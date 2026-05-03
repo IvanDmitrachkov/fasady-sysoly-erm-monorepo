@@ -14,8 +14,9 @@ const salesReportQuery = z.object({
   customerId: z.string().uuid().optional(),
 });
 
-function facadeAreaM2(f: { widthMm: number; heightMm: number }): number {
-  return (f.widthMm * f.heightMm) / 1_000_000;
+function facadeAreaM2(f: { widthMm: number; heightMm: number; quantity?: number | null }): number {
+  const quantity = f.quantity && f.quantity > 0 ? f.quantity : 1;
+  return ((f.widthMm * f.heightMm) / 1_000_000) * quantity;
 }
 
 export const reportsRoutes: FastifyPluginAsync = async (app) => {
@@ -89,7 +90,7 @@ export const reportsRoutes: FastifyPluginAsync = async (app) => {
       return {
         totals: {
           ordersCount: orders.length,
-          facadeCount: facades.length,
+          facadeCount: facades.reduce((sum, facade) => sum + (facade.quantity || 1), 0),
           facadeAreaTotal,
           totalCost,
         },
@@ -121,6 +122,7 @@ export const reportsRoutes: FastifyPluginAsync = async (app) => {
           color: facade.color,
           widthMm: facade.widthMm,
           heightMm: facade.heightMm,
+          quantity: facade.quantity,
           thicknessMm: facade.thicknessMm,
           areaM2: facadeAreaM2(facade),
         })),

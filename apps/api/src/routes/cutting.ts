@@ -35,6 +35,7 @@ export const cuttingRoutes: FastifyPluginAsync = async (app) => {
           sortIndex: f.sortIndex,
           widthMm: f.widthMm,
           heightMm: f.heightMm,
+          quantity: f.quantity,
           thicknessMm: f.thicknessMm,
         })),
       });
@@ -64,6 +65,7 @@ export const cuttingRoutes: FastifyPluginAsync = async (app) => {
           sortIndex: f.sortIndex,
           widthMm: f.widthMm,
           heightMm: f.heightMm,
+          quantity: f.quantity,
           thicknessMm: f.thicknessMm,
         })),
       });

@@ -27,6 +27,7 @@ export type FacadeDto = {
   color: string;
   widthMm: number;
   heightMm: number;
+  quantity: number;
   thicknessMm: number;
   edgeRadius: number | null;
   optionsExtra: string | null;
@@ -89,6 +90,7 @@ export type OrderCreateFacadePayload = {
   color: string;
   widthMm: number;
   heightMm: number;
+  quantity: number;
   thicknessMm: number;
   edgeRadius: number;
   optionsExtra?: string | null;

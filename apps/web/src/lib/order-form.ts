@@ -43,6 +43,7 @@ const facadeRowSchema = z
     color: z.string(),
     widthMm: z.number().positive("Ширина > 0"),
     heightMm: z.number().positive("Высота > 0"),
+    quantity: z.number().int("Количество целое").positive("Количество > 0"),
     thicknessMm: z.number().positive("Толщина > 0"),
     edgeRadius: z.number().finite("Укажите радиус").optional(),
     optionsExtra: z.string().optional(),
@@ -96,6 +97,7 @@ export function defaultFacadeRow(
     color: "",
     widthMm: 720,
     heightMm: 2400,
+    quantity: 1,
     thicknessMm: 16,
     edgeRadius: undefined,
     optionsExtra: "",
@@ -118,6 +120,7 @@ export function buildFacadesPayload(facades: CreateOrderFormValues["facades"]): 
       color: row.color,
       widthMm: row.widthMm,
       heightMm: row.heightMm,
+      quantity: row.quantity,
       thicknessMm: row.thicknessMm,
       edgeRadius: row.edgeRadius,
       optionsExtra: row.optionsExtra?.trim() ? row.optionsExtra : null,
@@ -148,6 +151,7 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
       color: f.color,
       widthMm: f.widthMm,
       heightMm: f.heightMm,
+      quantity: f.quantity ?? 1,
       thicknessMm: f.thicknessMm,
       edgeRadius: f.edgeRadius ?? 0,
       optionsExtra: f.optionsExtra ?? "",
@@ -156,7 +160,9 @@ export function orderDtoToFormValues(order: OrderDto): CreateOrderFormValues {
 }
 
 export function buildOrderWritePayload(v: CreateOrderFormValues) {
-  const facadeAreaTotal = calcFacadeAreaTotal(v.facades.map((f) => ({ widthMm: f.widthMm, heightMm: f.heightMm })));
+  const facadeAreaTotal = calcFacadeAreaTotal(
+    v.facades.map((f) => ({ widthMm: f.widthMm, heightMm: f.heightMm, quantity: f.quantity })),
+  );
   const facadeCount = calcFacadeCount(v.facades);
   const facadeCostTotal = calcFacadeCostTotal(facadeAreaTotal, v.facadePricePerM2);
   const millingCostTotal = calcMillingCostTotal(facadeAreaTotal, v.millingPricePerM2);

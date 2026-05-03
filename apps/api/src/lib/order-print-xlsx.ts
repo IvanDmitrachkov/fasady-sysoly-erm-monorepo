@@ -97,7 +97,7 @@ export async function buildOrderPrintXlsxBuffer(order: OrderForPrint): Promise<B
     ws.getCell(`A${r}`).value = i + 1;
     ws.getCell(`B${r}`).value = f.heightMm;
     ws.getCell(`C${r}`).value = f.widthMm;
-    ws.getCell(`D${r}`).value = 1;
+    ws.getCell(`D${r}`).value = f.quantity ?? 1;
     ws.getCell(`E${r}`).value = f.thicknessMm;
     ws.getCell(`F${r}`).value = f.edgeRadius != null && f.edgeRadius > 0 ? f.edgeRadius : "";
     ws.getCell(`G${r}`).value = handleCellText(f);

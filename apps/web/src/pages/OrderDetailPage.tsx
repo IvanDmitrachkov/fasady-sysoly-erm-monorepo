@@ -461,6 +461,7 @@ export function OrderDetailPage() {
                 <Table.Tr>
                   <Table.Th>#</Table.Th>
                   <Table.Th>Размеры</Table.Th>
+                  <Table.Th>Кол-во</Table.Th>
                   <Table.Th>Толщина</Table.Th>
                   <Table.Th>Фрезеровка</Table.Th>
                   <Table.Th>Покрытие</Table.Th>
@@ -477,6 +478,7 @@ export function OrderDetailPage() {
                         {f.widthMm} × {f.heightMm} мм
                       </Text>
                     </Table.Td>
+                    <Table.Td>{f.quantity} шт.</Table.Td>
                     <Table.Td>{f.thicknessMm} мм</Table.Td>
                     <Table.Td>{f.millingLabel || "—"}</Table.Td>
                     <Table.Td>{f.coatingType.name}</Table.Td>

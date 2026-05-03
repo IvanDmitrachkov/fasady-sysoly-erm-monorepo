@@ -156,6 +156,7 @@ model Facade {
   color          String      @default("")
   widthMm        Float
   heightMm       Float
+  quantity       Int         @default(1)
   thicknessMm    Float
   /// * Фрезеровка (текст позиции; может совпадать со справочником или быть своим).
   millingLabel   String      @default("")
