@@ -26,6 +26,7 @@ export function ShellLayout() {
     rel === "/orders" || (rel.startsWith("/orders/") && !rel.startsWith("/orders/board"));
   const kanbanNavActive = rel === "/orders/board";
   const timeReportNavActive = rel === "/time-report";
+  const reportsNavActive = rel === "/reports";
 
   const me = useQuery({
     queryKey: ["me"],
@@ -90,6 +91,9 @@ export function ShellLayout() {
         ) : null}
         {isAdmin ? <NavLink label="Этапы" component={RouterNavLink} to="/stages" /> : null}
         {isAdmin ? <NavLink label="Фасады: справочники" component={RouterNavLink} to="/facade-catalog" /> : null}
+        {isAdmin ? (
+          <NavLink label="Отчёты" component={RouterNavLink} to="/reports" active={reportsNavActive} />
+        ) : null}
         {isAdmin ? <NavLink label="Пользователи" component={RouterNavLink} to="/users" /> : null}
         {isAdmin ? <NavLink label="Заказчики" component={RouterNavLink} to="/customers" /> : null}
         {isAdmin ? <NavLink label="Журнал (audit)" component={RouterNavLink} to="/audit" /> : null}

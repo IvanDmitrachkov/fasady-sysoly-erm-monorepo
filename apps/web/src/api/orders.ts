@@ -33,6 +33,8 @@ export type OrderDto = {
   orderNumber: number;
   orderNumberFormatted: string;
   createdAt: string;
+  completedAt: string | null;
+  deletedAt: string | null;
   deadlineAt: string | null;
   comment: string | null;
 
@@ -139,6 +141,10 @@ export function orderUpdate(orderId: string, body: OrderUpdatePayload) {
     method: "PATCH",
     body: JSON.stringify(body),
   });
+}
+
+export async function orderDelete(orderId: string): Promise<void> {
+  await apiJson<unknown>(`/api/orders/${orderId}`, { method: "DELETE" });
 }
 
 /** Скачать бланк заказа (xlsx из шаблона). Только ADMIN/WORKER — см. API. */

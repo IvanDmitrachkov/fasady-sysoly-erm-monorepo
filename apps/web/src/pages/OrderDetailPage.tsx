@@ -21,7 +21,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { coatingTypesList, handleTypesList, millingTypesList } from "../api/facade-types";
-import { orderGet, orderMove, orderPrintXlsxPath, orderUpdate, type OrderUpdatePayload } from "../api/orders";
+import {
+  orderDelete,
+  orderGet,
+  orderMove,
+  orderPrintXlsxPath,
+  orderUpdate,
+  type OrderUpdatePayload,
+} from "../api/orders";
 import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
@@ -42,10 +49,12 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveStageId, setMoveStageId] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const canEdit = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
+  const isAdmin = me.data?.user.role === "ADMIN";
 
   const order = useQuery({
     queryKey: ["order", orderId],
@@ -161,6 +170,14 @@ export function OrderDetailPage() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: () => orderDelete(orderId!),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["orders"] });
+      void navigate("/orders", { replace: true });
+    },
+  });
+
   const o = order.data?.order;
 
   if (!orderId) {
@@ -223,6 +240,11 @@ export function OrderDetailPage() {
                 Печать заказа
               </Button>
             </>
+          ) : null}
+          {isAdmin ? (
+            <Button color="red" variant="light" size="sm" onClick={() => setDeleteOpen(true)}>
+              Удалить
+            </Button>
           ) : null}
         </Group>
       </Group>
@@ -392,6 +414,27 @@ export function OrderDetailPage() {
       </Table>
 
       <OrderTimeEntriesSection orderId={orderId!} canEdit={canEdit} />
+
+      <Modal opened={deleteOpen} onClose={() => setDeleteOpen(false)} title="Удалить заказ">
+        <Stack>
+          <Text size="sm">
+            Заказ №{o.orderNumberFormatted} будет перемещён в корзину и исчезнет из рабочих списков.
+          </Text>
+          {deleteMut.isError ? (
+            <Text c="red" size="sm">
+              {deleteMut.error instanceof Error ? deleteMut.error.message : "Ошибка"}
+            </Text>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setDeleteOpen(false)}>
+              Отмена
+            </Button>
+            <Button color="red" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()}>
+              Удалить
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal
         opened={editOpen}

@@ -108,8 +108,8 @@ const patchOrderBody = z.object({
 const moveBody = z.object({ stageId: z.string().min(1) });
 
 async function fetchOrder(prisma: PrismaClient, id: string): Promise<OrderWithRelations | null> {
-  return prisma.order.findUnique({
-    where: { id },
+  return prisma.order.findFirst({
+    where: { id, deletedAt: null },
     include: orderInclude,
   });
 }
@@ -144,6 +144,8 @@ function serializeOrder(order: OrderWithRelations) {
     orderNumber: order.orderNumber,
     orderNumberFormatted: formatOrderNumber(order.orderNumber),
     createdAt: order.createdAt.toISOString(),
+    completedAt: order.completedAt?.toISOString() ?? null,
+    deletedAt: order.deletedAt?.toISOString() ?? null,
     deadlineAt: order.deadlineAt?.toISOString() ?? null,
     comment: order.comment,
 
@@ -209,7 +211,10 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const orders = await app.prisma.order.findMany({
-      where: p.role === Role.CUSTOMER ? { customerId: p.customerId! } : {},
+      where: {
+        deletedAt: null,
+        ...(p.role === Role.CUSTOMER ? { customerId: p.customerId! } : {}),
+      },
       include: orderInclude,
       orderBy: { orderNumber: "desc" },
     });
@@ -264,6 +269,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
           orderNumber,
           customerId: parsed.data.customerId,
           currentStageId: newStage.id,
+          completedAt: newStage.isComplete ? new Date() : null,
           deadlineAt: parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null,
           comment: parsed.data.comment ?? null,
 
@@ -416,7 +422,10 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       const fromName = order.currentStage.name;
       const updated = await app.prisma.order.update({
         where: { id },
-        data: { currentStageId: stage.id },
+        data: {
+          currentStageId: stage.id,
+          completedAt: stage.isComplete ? order.completedAt ?? new Date() : null,
+        },
         include: orderInclude,
       });
 
@@ -431,6 +440,35 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       );
 
       return { order: serializeOrder(updated) };
+    },
+  );
+
+  app.delete(
+    "/orders/:id",
+    { preHandler: [requireRoles(Role.ADMIN)] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const order = await fetchOrder(app.prisma, id);
+      if (!order) {
+        return reply.code(404).send({ error: "Заказ не найден" });
+      }
+
+      const deleted = await app.prisma.order.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+        include: orderInclude,
+      });
+
+      await writeAudit(
+        app.prisma,
+        authUserId(request),
+        "order.delete",
+        `Заказ №${formatOrderNumber(deleted.orderNumber)} перемещён в корзину`,
+        "Order",
+        deleted.id,
+      );
+
+      return reply.code(204).send();
     },
   );
 };

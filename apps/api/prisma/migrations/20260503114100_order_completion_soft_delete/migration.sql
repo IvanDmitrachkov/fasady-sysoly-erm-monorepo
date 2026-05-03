@@ -1,0 +1,2 @@
+ALTER TABLE "Order" ADD COLUMN "completedAt" DATETIME;
+ALTER TABLE "Order" ADD COLUMN "deletedAt" DATETIME;

@@ -16,6 +16,7 @@ import { usersRoutes } from "./routes/users.js";
 import { cuttingRoutes } from "./routes/cutting.js";
 import { orderPrintRoutes } from "./routes/order-print.js";
 import { facadeTypesRoutes } from "./routes/facade-types.js";
+import { reportsRoutes } from "./routes/reports.js";
 
 export async function buildApp(env: Env) {
   const app = Fastify({ logger: true });
@@ -51,6 +52,7 @@ export async function buildApp(env: Env) {
   await app.register(auditRoutes, { prefix: "/api" });
   await app.register(timeEntriesRoutes, { prefix: "/api" });
   await app.register(usersRoutes, { prefix: "/api" });
+  await app.register(reportsRoutes, { prefix: "/api" });
 
   // Раздача SPA под /admin после сборки: см. copy-web.mjs и включите @fastify/static
   // (пути Vite `base: '/admin/'` нужно согласовать с prefix — добавим в следующей итерации)

@@ -90,6 +90,8 @@ model Order {
   /// * SQLite: autoincrement только на PK — номер выдаём в коде при create.
   orderNumber         Int         @unique
   createdAt           DateTime    @default(now())
+  completedAt         DateTime?
+  deletedAt           DateTime?
   deadlineAt          DateTime?
   comment             String?
   /// * Количество фасадов штук
