@@ -43,6 +43,7 @@ jobs:
           cp apps/api/package.json artifacts/apps/api/
           cp -r apps/api/dist artifacts/apps/api/dist
           cp -r apps/api/prisma artifacts/apps/api/prisma
+          cp -r apps/api/src artifacts/apps/api/src
           cp -r apps/api/web-dist artifacts/apps/api/web-dist
 
       - name: Upload build artifact
