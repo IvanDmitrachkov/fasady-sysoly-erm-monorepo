@@ -37,6 +37,21 @@ async function registerWebStatic(app: FastifyInstance, env: Env) {
   const webDistPath = resolveWebDistPath(env);
   const indexPath = path.join(webDistPath, "index.html");
 
+  app.get("/", async (_request, reply) =>
+    reply.type("text/html; charset=utf-8").send(`<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ERM Фасады Сысолы</title>
+  </head>
+  <body>
+    <h1>ERM Фасады Сысолы</h1>
+    <p>Админ-панель доступна по адресу <a href="/admin/">/admin/</a>.</p>
+  </body>
+</html>`),
+  );
+
   if (!existsSync(indexPath)) {
     const message = `Built web app not found at ${indexPath}. Run the web build and copy-web step first.`;
     if (env.NODE_ENV === "production") {

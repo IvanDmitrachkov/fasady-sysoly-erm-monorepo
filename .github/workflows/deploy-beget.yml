@@ -1,0 +1,116 @@
+name: Deploy to Beget
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: beget-deploy
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: mysql://user:password@127.0.0.1:3306/erm_build
+      JWT_SECRET: build-only-secret-at-least-32-characters
+      NODE_ENV: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build project
+        run: yarn build
+
+      - name: Pack deployment artifact
+        run: |
+          mkdir -p artifacts/apps/api
+          cp package.json yarn.lock server.js artifacts/
+          cp apps/api/package.json artifacts/apps/api/
+          cp -r apps/api/dist artifacts/apps/api/dist
+          cp -r apps/api/prisma artifacts/apps/api/prisma
+          cp -r apps/api/web-dist artifacts/apps/api/web-dist
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beget-build
+          path: artifacts/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    env:
+      SERVER_HOST: ${{ secrets.BEGET_HOST }}
+      SERVER_USER: ${{ secrets.BEGET_USER }}
+      SERVER_PASSWORD: ${{ secrets.BEGET_PASSWORD }}
+      SERVER_PATH: ${{ secrets.BEGET_PATH }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      PORT: ${{ secrets.PORT }}
+      SEED_DATABASE: ${{ secrets.SEED_DATABASE }}
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: beget-build
+          path: artifacts/
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Create production env file
+        run: |
+          {
+            echo "NODE_ENV=production"
+            echo "DATABASE_URL=$DATABASE_URL"
+            echo "JWT_SECRET=$JWT_SECRET"
+            echo "PORT=${PORT:-3000}"
+          } > artifacts/.env
+          cp artifacts/.env artifacts/apps/api/.env
+
+      - name: Upload files to Beget
+        env:
+          SSHPASS: ${{ secrets.BEGET_PASSWORD }}
+        run: |
+          sshpass -e rsync -az --delete \
+            --exclude='node_modules' \
+            --exclude='.data' \
+            artifacts/ "$SERVER_USER@$SERVER_HOST:$SERVER_PATH/"
+
+      - name: Install server dependencies and restart
+        env:
+          SSHPASS: ${{ secrets.BEGET_PASSWORD }}
+        run: |
+          sshpass -e ssh "$SERVER_USER@$SERVER_HOST" <<EOF
+          set -e
+          cd "$SERVER_PATH"
+          mkdir -p tmp
+          yarn install --frozen-lockfile --production=false
+          yarn workspace @erm/api db:generate
+          yarn workspace @erm/api db:migrate:deploy
+          if [ "${SEED_DATABASE:-true}" = "true" ]; then
+            yarn workspace @erm/api db:seed
+          fi
+          touch tmp/restart.txt
+          EOF

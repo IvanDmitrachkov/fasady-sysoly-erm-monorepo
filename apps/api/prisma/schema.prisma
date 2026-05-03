@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -11,7 +11,7 @@ model Customer {
   id              String   @id @default(uuid())
   name            String
   phone           String?
-  deliveryAddress String?
+  deliveryAddress String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   orders          Order[]
@@ -88,15 +88,15 @@ model HandleType {
 
 model Order {
   id                  String      @id @default(uuid())
-  /// * SQLite: autoincrement только на PK — номер выдаём в коде при create.
+  /// * Номер выдаём в коде при create, чтобы сохранить бизнес-нумерацию отдельно от id.
   orderNumber         Int         @unique
   createdAt           DateTime    @default(now())
   completedAt         DateTime?
   deletedAt           DateTime?
   deadlineAt          DateTime?
   workType            String?
-  deliveryAddress     String?
-  comment             String?
+  deliveryAddress     String?     @db.Text
+  comment             String?     @db.Text
   /// * Количество фасадов штук
   facadeCount         Int         @default(0)
   /// * Цена одного кв.м фасада (редактируется менеджером)
@@ -165,7 +165,7 @@ model Facade {
   /// * Длина интегрированной ручки, мм (если указана ручка).
   handleLengthMm Float?
   edgeRadius     Float?
-  optionsExtra   String?
+  optionsExtra   String?     @db.Text
   /// * Базовая цена позиции, посчитанная на клиенте и сохранённая вместе с заказом
   basePrice      Float
   createdAt      DateTime    @default(now())
@@ -178,7 +178,7 @@ model AuditLog {
   id         String   @id @default(uuid())
   userId     String
   action     String
-  message    String
+  message    String   @db.Text
   entityType String?
   entityId   String?
   createdAt  DateTime @default(now())
