@@ -16,8 +16,37 @@ export type TimeEntryDto = {
   stage: { id: string; name: string };
 };
 
+export type TimeEntryReportDto = TimeEntryDto & {
+  order: { id: string; orderNumber: string };
+};
+
 export function timeEntriesList(orderId: string) {
   return apiJson<{ entries: TimeEntryDto[] }>(`/api/orders/${orderId}/time-entries`);
+}
+
+export function timeEntriesReport(params: { from: string; to: string; userId?: string }) {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.userId) q.set("userId", params.userId);
+  return apiJson<{ entries: TimeEntryReportDto[]; totalMinutes: number }>(
+    `/api/time-entries/report?${q.toString()}`,
+  );
+}
+
+export function timeEntryUpdate(
+  id: string,
+  body: Partial<{
+    stageId: string;
+    minutes: number;
+    comment: string | null;
+    workedAt: string;
+  }>,
+) {
+  return apiJson<{ entry: TimeEntryReportDto }>(`/api/time-entries/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export function timeEntryCreate(

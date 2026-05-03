@@ -25,6 +25,7 @@ export function ShellLayout() {
   const ordersNavActive =
     rel === "/orders" || (rel.startsWith("/orders/") && !rel.startsWith("/orders/board"));
   const kanbanNavActive = rel === "/orders/board";
+  const timeReportNavActive = rel === "/time-report";
 
   const me = useQuery({
     queryKey: ["me"],
@@ -40,6 +41,7 @@ export function ShellLayout() {
 
   const user = me.data?.user;
   const isAdmin = user?.role === "ADMIN";
+  const canTimeReport = user?.role === "ADMIN" || user?.role === "WORKER";
 
   return (
     <AppShell
@@ -78,6 +80,14 @@ export function ShellLayout() {
         <NavLink label="Главная" component={RouterNavLink} to="/" end />
         <NavLink label="Заказы" component={RouterLink} to="/orders" active={ordersNavActive} />
         <NavLink label="Канбан" component={RouterLink} to="/orders/board" active={kanbanNavActive} />
+        {canTimeReport ? (
+          <NavLink
+            label="Трудозатраты (отчёт)"
+            component={RouterNavLink}
+            to="/time-report"
+            active={timeReportNavActive}
+          />
+        ) : null}
         {isAdmin ? <NavLink label="Этапы" component={RouterNavLink} to="/stages" /> : null}
         {isAdmin ? <NavLink label="Фасады: справочники" component={RouterNavLink} to="/facade-catalog" /> : null}
         {isAdmin ? <NavLink label="Пользователи" component={RouterNavLink} to="/users" /> : null}

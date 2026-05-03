@@ -12,6 +12,7 @@ import { FacadeCatalogPage } from "./pages/FacadeCatalogPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AuditPage } from "./pages/AuditPage";
 import { CustomersPage } from "./pages/CustomersPage";
+import { TimeReportPage } from "./pages/TimeReportPage";
 import { ACCESS_TOKEN_KEY } from "./api/http";
 
 function RequireAuth() {
@@ -43,6 +44,7 @@ export const router = createBrowserRouter(
             { path: "users", element: <UsersPage /> },
             { path: "customers", element: <CustomersPage /> },
             { path: "audit", element: <AuditPage /> },
+            { path: "time-report", element: <TimeReportPage /> },
           ],
         },
       ],
