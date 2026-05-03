@@ -62,22 +62,6 @@ const facadeRowSchema = z
         path: ["edgeRadius"],
       });
     }
-    const hl = row.handleLabel.trim();
-    if (!isNoHandleLabel(hl)) {
-      if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Укажите длину интегрированной ручки, мм",
-          path: ["handleLengthMm"],
-        });
-      }
-    } else if (row.handleLengthMm != null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Без ручки не указывайте длину",
-        path: ["handleLengthMm"],
-      });
-    }
   });
 
 export const createOrderFormSchema = z.object({
@@ -88,10 +72,10 @@ export const createOrderFormSchema = z.object({
   comment: z.string().optional(),
 
   // Новые поля цен
-  facadePricePerM2: z.number().positive().nullable().optional(),
-  millingPricePerM2: z.number().positive().nullable().optional(),
-  handleLengthTotalMm: z.number().positive().nullable().optional(),
-  handlePricePerMeter: z.number().positive().nullable().optional(),
+  facadePricePerM2: z.number().positive("Цена фасада должна быть больше 0").nullable().optional(),
+  millingPricePerM2: z.number().nonnegative().nullable().optional(),
+  handleLengthTotalMm: z.number().nonnegative().nullable().optional(),
+  handlePricePerMeter: z.number().nonnegative().nullable().optional(),
   otherServicesPrice: z.number().finite().nullable().optional(),
   discount: z.number().finite().nullable().optional(),
   advance: z.number().finite().nullable().optional(),
@@ -130,7 +114,7 @@ export function buildFacadesPayload(facades: CreateOrderFormValues["facades"]): 
       millingLabel: row.millingLabel.trim(),
       coatingTypeId: row.coatingTypeId,
       handleLabel: hasHandle ? hl : null,
-      handleLengthMm: hasHandle ? row.handleLengthMm ?? null : null,
+      handleLengthMm: null,
       color: row.color,
       widthMm: row.widthMm,
       heightMm: row.heightMm,

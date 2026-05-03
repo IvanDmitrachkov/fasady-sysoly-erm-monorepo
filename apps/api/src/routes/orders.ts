@@ -31,22 +31,6 @@ const facadeItem = z
         path: ["millingLabel"],
       });
     }
-    const hl = row.handleLabel?.trim() ?? "";
-    if (hl && hl !== NO_HANDLE_LABEL) {
-      if (row.handleLengthMm == null || !Number.isFinite(row.handleLengthMm) || row.handleLengthMm <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Укажите длину интегрированной ручки, мм",
-          path: ["handleLengthMm"],
-        });
-      }
-    } else if (row.handleLengthMm != null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Длина ручки задаётся только если указана ручка",
-        path: ["handleLengthMm"],
-      });
-    }
   });
 
 const orderInclude = {
@@ -190,7 +174,7 @@ function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
     millingLabel: f.millingLabel.trim(),
     coatingTypeId: f.coatingTypeId,
     handleLabel,
-    handleLengthMm: handleLabel ? f.handleLengthMm ?? null : null,
+    handleLengthMm: null,
     color: f.color,
     widthMm: f.widthMm,
     heightMm: f.heightMm,
