@@ -109,6 +109,9 @@ export function OrdersPage() {
           <Button component={Link} to="/orders/board" variant="light" size="sm">
             Канбан
           </Button>
+          <Button component={Link} to="/orders/archive" variant="light" size="sm">
+            Архив
+          </Button>
         </Group>
       </Group>
 

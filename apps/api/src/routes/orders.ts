@@ -112,6 +112,9 @@ const patchOrderBody = z.object({
 });
 
 const moveBody = z.object({ stageId: z.string().min(1) });
+const listOrdersQuery = z.object({
+  scope: z.enum(["active", "archive", "all"]).default("active"),
+});
 
 async function fetchOrder(prisma: PrismaClient, id: string): Promise<OrderWithRelations | null> {
   return prisma.order.findFirst({
@@ -214,14 +217,32 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireJwt);
 
   app.get("/orders", async (request, reply) => {
+    const parsed = listOrdersQuery.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "Некорректные параметры", details: parsed.error.flatten() });
+    }
+
     const p = authPayload(request);
     if (p.role === Role.CUSTOMER && !p.customerId) {
       return reply.code(403).send({ error: "Нет привязки к заказчику" });
     }
 
+    const archiveCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const archivedWhere: Prisma.OrderWhereInput = {
+      completedAt: { lte: archiveCutoff },
+      currentStage: { isComplete: true },
+    };
+    const scopeWhere: Prisma.OrderWhereInput =
+      parsed.data.scope === "archive"
+        ? archivedWhere
+        : parsed.data.scope === "active"
+          ? { NOT: archivedWhere }
+          : {};
+
     const orders = await app.prisma.order.findMany({
       where: {
         deletedAt: null,
+        ...scopeWhere,
         ...(p.role === Role.CUSTOMER ? { customerId: p.customerId! } : {}),
       },
       include: orderInclude,

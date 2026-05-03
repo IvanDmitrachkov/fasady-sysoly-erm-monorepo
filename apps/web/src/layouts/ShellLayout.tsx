@@ -20,6 +20,7 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import {
+  IconArchive,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -84,8 +85,10 @@ export function ShellLayout() {
 
   const rel = pathBelowAdmin(pathname);
   const ordersNavActive =
-    rel === "/orders" || (rel.startsWith("/orders/") && !rel.startsWith("/orders/board"));
+    rel === "/orders" ||
+    (rel.startsWith("/orders/") && !rel.startsWith("/orders/board") && !rel.startsWith("/orders/archive"));
   const kanbanNavActive = rel === "/orders/board";
+  const archiveNavActive = rel === "/orders/archive";
   const timeReportNavActive = rel === "/time-report";
   const reportsNavActive = rel === "/reports";
   const customersNavActive = rel === "/customers";
@@ -225,6 +228,14 @@ export function ShellLayout() {
               to="/orders/board"
               active={kanbanNavActive}
               leftSection={navIcon(<IconLayoutKanban size={16} />, "cyan")}
+              styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
+            />
+            <NavLink
+              label={navbarCollapsed ? null : "Архив"}
+              component={RouterLink}
+              to="/orders/archive"
+              active={archiveNavActive}
+              leftSection={navIcon(<IconArchive size={16} />, "gray")}
               styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
             />
           </NavGroup>

@@ -66,8 +66,11 @@ export type OrderDto = {
   facades: FacadeDto[];
 };
 
-export function ordersList() {
-  return apiJson<{ orders: OrderDto[] }>("/api/orders");
+export type OrdersListScope = "active" | "archive" | "all";
+
+export function ordersList(scope: OrdersListScope = "active") {
+  const query = scope === "active" ? "" : `?scope=${scope}`;
+  return apiJson<{ orders: OrderDto[] }>(`/api/orders${query}`);
 }
 
 export function orderMove(orderId: string, stageId: string) {

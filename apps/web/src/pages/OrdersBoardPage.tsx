@@ -199,6 +199,9 @@ export function OrdersBoardPage() {
           <Button component={Link} to="/orders" variant="light" size="sm">
             Список
           </Button>
+          <Button component={Link} to="/orders/archive" variant="light" size="sm">
+            Архив
+          </Button>
         </Group>
       </Group>
 
