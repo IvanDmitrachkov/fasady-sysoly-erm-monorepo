@@ -110,8 +110,8 @@ jobs:
           mkdir -p tmp
           yarn install --frozen-lockfile --production=false
           yarn workspace @erm/api db:generate
-          yarn workspace @erm/api db:push
-          if [ "${SEED_DATABASE:-true}" = "true" ]; then
+          yarn workspace @erm/api db:migrate:deploy
+          if [ "${SEED_DATABASE:-false}" = "true" ]; then
             yarn workspace @erm/api db:seed
           fi
           touch tmp/restart.txt
