@@ -1,6 +1,7 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ActionIcon,
   AppShell,
   Avatar,
   Burger,
@@ -13,12 +14,15 @@ import {
   Text,
   ThemeIcon,
   Title,
+  Tooltip,
   UnstyledButton,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
 import {
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconClockHour4,
   IconFileAnalytics,
   IconFolders,
@@ -48,10 +52,10 @@ function pathBelowAdmin(pathname: string): string {
   return pathname;
 }
 
-function NavGroup({ label, children }: { label: string; children: ReactNode }) {
+function NavGroup({ label, collapsed, children }: { label: string; collapsed: boolean; children: ReactNode }) {
   return (
-    <Stack gap={6}>
-      <Divider label={label} labelPosition="left" />
+    <Stack gap={collapsed ? 4 : 6}>
+      <Divider label={collapsed ? undefined : label} labelPosition="left" />
       <Stack gap={2}>{children}</Stack>
     </Stack>
   );
@@ -69,6 +73,7 @@ export function ShellLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [opened, { toggle }] = useDisclosure();
+  const [navbarCollapsed, setNavbarCollapsed] = useState(false);
   const { toggleColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
 
@@ -105,7 +110,7 @@ export function ShellLayout() {
   return (
     <AppShell
       header={{ height: 56 }}
-      navbar={{ width: 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      navbar={{ width: navbarCollapsed ? 76 : 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
       <AppShell.Header>
@@ -164,97 +169,125 @@ export function ShellLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p={navbarCollapsed ? "xs" : "md"}>
         <Stack gap="md">
+          <Group justify={navbarCollapsed ? "center" : "space-between"} gap="xs">
+            {navbarCollapsed ? null : (
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                Меню
+              </Text>
+            )}
+            <Tooltip label={navbarCollapsed ? "Развернуть меню" : "Свернуть меню"} position="right">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                onClick={() => setNavbarCollapsed((v) => !v)}
+                aria-label={navbarCollapsed ? "Развернуть меню" : "Свернуть меню"}
+              >
+                {navbarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+
           <NavLink
-            label="Главная"
+            label={navbarCollapsed ? null : "Главная"}
             component={RouterNavLink}
             to="/"
             end
             leftSection={navIcon(<IconHome2 size={16} />, "gray")}
+            styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
           />
 
-          <NavGroup label="Производство">
+          <NavGroup label="Производство" collapsed={navbarCollapsed}>
             <NavLink
-              label="Заказы"
+              label={navbarCollapsed ? null : "Заказы"}
               component={RouterLink}
               to="/orders"
               active={ordersNavActive}
               leftSection={navIcon(<IconShoppingCart size={16} />, "blue")}
+              styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
             />
             <NavLink
-              label="Канбан"
+              label={navbarCollapsed ? null : "Канбан"}
               component={RouterLink}
               to="/orders/board"
               active={kanbanNavActive}
               leftSection={navIcon(<IconLayoutKanban size={16} />, "cyan")}
+              styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
             />
           </NavGroup>
 
           {canTimeReport || isAdmin ? (
-            <NavGroup label="Аналитика">
+            <NavGroup label="Аналитика" collapsed={navbarCollapsed}>
               {isAdmin ? (
                 <NavLink
-                  label="Отчёты"
+                  label={navbarCollapsed ? null : "Отчёты"}
                   component={RouterNavLink}
                   to="/reports"
                   active={reportsNavActive}
                   leftSection={navIcon(<IconReportAnalytics size={16} />, "violet")}
+                  styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
                 />
               ) : null}
               {canTimeReport ? (
                 <NavLink
-                  label="Трудозатраты"
+                  label={navbarCollapsed ? null : "Трудозатраты"}
                   component={RouterNavLink}
                   to="/time-report"
                   active={timeReportNavActive}
                   leftSection={navIcon(<IconClockHour4 size={16} />, "orange")}
+                  styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
                 />
               ) : null}
             </NavGroup>
           ) : null}
 
           {isAdmin ? (
-            <NavGroup label="Администрирование">
+            <NavGroup label="Администрирование" collapsed={navbarCollapsed}>
               <NavLink
-                label="Заказчики"
+                label={navbarCollapsed ? null : "Заказчики"}
                 component={RouterNavLink}
                 to="/customers"
                 active={customersNavActive}
                 leftSection={navIcon(<IconUserSquareRounded size={16} />, "teal")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
               <NavLink
-                label="Пользователи"
+                label={navbarCollapsed ? null : "Пользователи"}
                 component={RouterNavLink}
                 to="/users"
                 active={usersNavActive}
                 leftSection={navIcon(<IconUsers size={16} />, "indigo")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
               <NavLink
-                label="Этапы"
+                label={navbarCollapsed ? null : "Этапы"}
                 component={RouterNavLink}
                 to="/stages"
                 active={stagesNavActive}
                 leftSection={navIcon(<IconFolders size={16} />, "grape")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
               <NavLink
-                label="Фасады: справочники"
+                label={navbarCollapsed ? null : "Фасады: справочники"}
                 component={RouterNavLink}
                 to="/facade-catalog"
                 active={facadeCatalogNavActive}
                 leftSection={navIcon(<IconFolders size={16} />, "pink")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
             </NavGroup>
           ) : null}
 
           {isAdmin ? (
-            <NavGroup label="Система">
+            <NavGroup label="Система" collapsed={navbarCollapsed}>
               <NavLink
-                label="Журнал"
+                label={navbarCollapsed ? null : "Журнал"}
                 component={RouterNavLink}
                 to="/audit"
                 active={auditNavActive}
                 leftSection={navIcon(<IconFileAnalytics size={16} />, "red")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
             </NavGroup>
           ) : null}
