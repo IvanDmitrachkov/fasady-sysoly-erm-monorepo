@@ -26,6 +26,7 @@ import {
   IconClockHour4,
   IconFileAnalytics,
   IconFolders,
+  IconHelpCircle,
   IconHome2,
   IconLayoutKanban,
   IconLogout,
@@ -92,6 +93,7 @@ export function ShellLayout() {
   const stagesNavActive = rel === "/stages";
   const facadeCatalogNavActive = rel === "/facade-catalog";
   const auditNavActive = rel === "/audit";
+  const helpNavActive = rel === "/help";
 
   const me = useQuery({
     queryKey: ["me"],
@@ -289,8 +291,16 @@ export function ShellLayout() {
             </NavGroup>
           ) : null}
 
-          {isAdmin ? (
-            <NavGroup label="Система" collapsed={navbarCollapsed}>
+          <NavGroup label="Система" collapsed={navbarCollapsed}>
+            <NavLink
+              label={navbarCollapsed ? null : "Инструкция"}
+              component={RouterNavLink}
+              to="/help"
+              active={helpNavActive}
+              leftSection={navIcon(<IconHelpCircle size={16} />, "green")}
+              styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
+            />
+            {isAdmin ? (
               <NavLink
                 label={navbarCollapsed ? null : "Журнал"}
                 component={RouterNavLink}
@@ -299,8 +309,8 @@ export function ShellLayout() {
                 leftSection={navIcon(<IconFileAnalytics size={16} />, "red")}
                 styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
               />
-            </NavGroup>
-          ) : null}
+            ) : null}
+          </NavGroup>
         </Stack>
       </AppShell.Navbar>
 

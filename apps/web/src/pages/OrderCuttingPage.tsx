@@ -6,6 +6,10 @@ import { cuttingPdfPath, cuttingPlanGet, type CuttingSheetDto } from "../api/cut
 import { apiBlob } from "../api/http";
 import { orderPrintXlsxPath } from "../api/orders";
 
+function placementSizeText(widthMm: number, heightMm: number) {
+  return `${widthMm}×${heightMm} мм`;
+}
+
 function SheetSvg({ sheet }: { sheet: CuttingSheetDto }) {
   const w = sheet.widthMm;
   const h = sheet.heightMm;
@@ -30,8 +34,15 @@ function SheetSvg({ sheet }: { sheet: CuttingSheetDto }) {
             fontSize={Math.min(p.widthMm, p.heightMm) * 0.09}
             fill="#0d47a1"
           >
-            {p.label}
-            {p.rotated ? " ↻" : ""}
+            <tspan x={p.xMm + p.widthMm * 0.04}>{p.label}</tspan>
+            <tspan x={p.xMm + p.widthMm * 0.04} dy="1.2em">
+              {placementSizeText(p.widthMm, p.heightMm)}
+            </tspan>
+            {p.rotated ? (
+              <tspan x={p.xMm + p.widthMm * 0.04} dy="1.2em">
+                повернуто
+              </tspan>
+            ) : null}
           </text>
         </g>
       ))}
