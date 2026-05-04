@@ -49,6 +49,17 @@ model Stage {
   timeEntries TimeEntry[]
 }
 
+/// * Под-статус заказа на текущем этапе (очередь / в работе / …). Справочник в БД.
+model OrderWorkState {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
 /// * Тип фрезеровки (справочник для подсказок), цена за м² — ориентир.
 model MillingType {
   id         String   @id @default(uuid())
@@ -127,9 +138,11 @@ model Order {
   advance             Float?
   customerId          String
   currentStageId      String
+  workStateId         String
   updatedAt           DateTime    @updatedAt
   facades             Facade[]
   currentStage        Stage       @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
+  workState           OrderWorkState @relation(fields: [workStateId], references: [id])
   customer            Customer    @relation(fields: [customerId], references: [id])
   timeEntries         TimeEntry[]
 }

@@ -21,6 +21,7 @@ import { cuttingRoutes } from "./routes/cutting.js";
 import { orderPrintRoutes } from "./routes/order-print.js";
 import { facadeTypesRoutes } from "./routes/facade-types.js";
 import { reportsRoutes } from "./routes/reports.js";
+import { orderWorkStatesRoutes } from "./routes/order-work-states.js";
 
 function defaultWebDistPath(): string {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web-dist");
@@ -98,6 +99,7 @@ export async function buildApp(env: Env) {
   await app.register(meRoutes, { prefix: "/api" });
   await app.register(cuttingRoutes, { prefix: "/api" });
   await app.register(orderPrintRoutes, { prefix: "/api" });
+  await app.register(orderWorkStatesRoutes, { prefix: "/api" });
   await app.register(ordersRoutes, { prefix: "/api" });
   await app.register(facadeTypesRoutes, { prefix: "/api" });
   await app.register(stagesRoutes, { prefix: "/api" });

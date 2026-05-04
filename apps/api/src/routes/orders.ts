@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHandlers.js";
 import { writeAudit } from "../lib/audit.js";
+import { DEFAULT_ORDER_WORK_STATE_SLUG } from "../lib/default-order-work-states.js";
 import { formatOrderNumber } from "../lib/order-number.js";
 
 const NO_HANDLE_LABEL = "Нет";
@@ -37,6 +38,7 @@ const facadeItem = z
 const orderInclude = {
   customer: true,
   currentStage: true,
+  workState: true,
   facades: {
     orderBy: { sortIndex: "asc" as const },
     include: { coatingType: true },
@@ -97,6 +99,7 @@ const patchOrderBody = z.object({
 });
 
 const moveBody = z.object({ stageId: z.string().min(1) });
+const setWorkStateBody = z.object({ workStateId: z.string().min(1) });
 const listOrdersQuery = z.object({
   scope: z.enum(["active", "archive", "all"]).default("active"),
 });
@@ -164,6 +167,12 @@ function serializeOrder(order: OrderWithRelations) {
 
     customer: order.customer,
     currentStage: order.currentStage,
+    workState: {
+      id: order.workState.id,
+      slug: order.workState.slug,
+      name: order.workState.name,
+      sortOrder: order.workState.sortOrder,
+    },
     facades: order.facades.map(serializeFacade),
   };
 }
@@ -278,6 +287,13 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "Заказчик не найден" });
       }
 
+      const queueWorkState = await app.prisma.orderWorkState.findUnique({
+        where: { slug: DEFAULT_ORDER_WORK_STATE_SLUG },
+      });
+      if (!queueWorkState) {
+        return reply.code(500).send({ error: "Не настроены под-статусы заказа (очередь)" });
+      }
+
       const maxAgg = await app.prisma.order.aggregate({ _max: { orderNumber: true } });
       const orderNumber = (maxAgg._max.orderNumber ?? 0) + 1;
 
@@ -286,6 +302,7 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
           orderNumber,
           customerId: parsed.data.customerId,
           currentStageId: newStage.id,
+          workStateId: queueWorkState.id,
           completedAt: newStage.isComplete ? new Date() : null,
           deadlineAt: parsed.data.deadlineAt ? new Date(parsed.data.deadlineAt) : null,
           workType: parsed.data.workType?.trim() ? parsed.data.workType.trim() : null,
@@ -444,11 +461,19 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "Этап не найден" });
       }
 
+      const queueWorkState = await app.prisma.orderWorkState.findUnique({
+        where: { slug: DEFAULT_ORDER_WORK_STATE_SLUG },
+      });
+      if (!queueWorkState) {
+        return reply.code(500).send({ error: "Не настроены под-статусы заказа (очередь)" });
+      }
+
       const fromName = order.currentStage.name;
       const updated = await app.prisma.order.update({
         where: { id },
         data: {
           currentStageId: stage.id,
+          workStateId: queueWorkState.id,
           completedAt: stage.isComplete ? order.completedAt ?? new Date() : null,
         },
         include: orderInclude,
@@ -459,7 +484,47 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         app.prisma,
         uid,
         "order.move",
-        `Заказ №${formatOrderNumber(updated.orderNumber)}: «${fromName}» → «${stage.name}»`,
+        `Заказ №${formatOrderNumber(updated.orderNumber)}: «${fromName}» → «${stage.name}» (под-статус: очередь)`,
+        "Order",
+        updated.id,
+      );
+
+      return { order: serializeOrder(updated) };
+    },
+  );
+
+  app.post(
+    "/orders/:id/work-state",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = setWorkStateBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
+      }
+
+      const order = await fetchOrder(app.prisma, id);
+      if (!order) {
+        return reply.code(404).send({ error: "Заказ не найден" });
+      }
+
+      const ws = await app.prisma.orderWorkState.findUnique({ where: { id: parsed.data.workStateId } });
+      if (!ws) {
+        return reply.code(400).send({ error: "Под-статус не найден" });
+      }
+
+      const updated = await app.prisma.order.update({
+        where: { id },
+        data: { workStateId: ws.id },
+        include: orderInclude,
+      });
+
+      const uid = authUserId(request);
+      await writeAudit(
+        app.prisma,
+        uid,
+        "order.work_state",
+        `Заказ №${formatOrderNumber(updated.orderNumber)}: под-статус «${ws.name}»`,
         "Order",
         updated.id,
       );

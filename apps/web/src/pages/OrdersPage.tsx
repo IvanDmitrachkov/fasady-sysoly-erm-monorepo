@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { meRequest } from "../api/auth";
-import { orderMove, ordersList, type OrderDto } from "../api/orders";
+import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
+import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { money } from "../lib/order-form";
+import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import dayjs from "dayjs";
 import "./OrdersPage.css";
 
@@ -17,6 +19,11 @@ export function OrdersPage() {
 
   const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersList() });
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
+  const workStates = useQuery({
+    queryKey: ["order-work-states"],
+    queryFn: orderWorkStatesList,
+    enabled: canMoveOrder,
+  });
 
   const stageOptions = useMemo(() => {
     if (!stages.data) return [];
@@ -25,6 +32,18 @@ export function OrdersPage() {
 
   const moveMut = useMutation({
     mutationFn: ({ id, stageId }: { id: string; stageId: string }) => orderMove(id, stageId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
+  const workStateOptions = useMemo(
+    () => (workStates.data?.orderWorkStates ?? []).map((w) => ({ value: w.id, label: w.name })),
+    [workStates.data],
+  );
+
+  const workStateMut = useMutation({
+    mutationFn: ({ id, workStateId }: { id: string; workStateId: string }) => orderSetWorkState(id, workStateId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["orders"] });
     },
@@ -48,6 +67,28 @@ export function OrdersPage() {
       />
     ) : (
       <Badge variant="light">{order.currentStage.name}</Badge>
+    );
+
+  const workStateControl = (order: OrderDto, fullWidth = false) =>
+    canMoveOrder ? (
+      <Select
+        data={workStateOptions}
+        value={order.workState.id}
+        onChange={(workStateId) => {
+          if (workStateId && workStateId !== order.workState.id) {
+            workStateMut.mutate({ id: order.id, workStateId });
+          }
+        }}
+        size="xs"
+        variant="filled"
+        allowDeselect={false}
+        disabled={workStateMut.isPending || workStateOptions.length === 0}
+        w={fullWidth ? "100%" : 200}
+      />
+    ) : (
+      <Badge variant="light" color={orderWorkStateBadgeColor(order.workState.slug)}>
+        {order.workState.name}
+      </Badge>
     );
 
   const rows = orders.data?.orders.map((o) => {
@@ -80,6 +121,7 @@ export function OrdersPage() {
           ) : null}
         </Table.Td>
         <Table.Td>{stageControl(o)}</Table.Td>
+        <Table.Td>{workStateControl(o)}</Table.Td>
         <Table.Td>
           <Text size="sm">{o.deadlineAt ? dayjs(o.deadlineAt).format("DD.MM.YY") : "—"}</Text>
           <Text size="xs" c="dimmed" lineClamp={1}>
@@ -140,7 +182,10 @@ export function OrdersPage() {
             ) : null}
           </div>
 
-          {stageControl(o, true)}
+          <Stack gap={6}>
+            {stageControl(o, true)}
+            {workStateControl(o, true)}
+          </Stack>
 
           <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
             <div className="orders-mobile-card-cell">
@@ -215,12 +260,13 @@ export function OrdersPage() {
         orders.data.orders.length > 0 ? (
           <>
             <ScrollArea type="auto" offsetScrollbars visibleFrom="sm">
-              <Table striped highlightOnHover withTableBorder verticalSpacing={6} fz="sm" miw={1100}>
+              <Table striped highlightOnHover withTableBorder verticalSpacing={6} fz="sm" miw={1280}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Номер</Table.Th>
                     <Table.Th>Заказчик</Table.Th>
                     <Table.Th>Этап</Table.Th>
+                    <Table.Th>На участке</Table.Th>
                     <Table.Th>Срок / работа</Table.Th>
                     <Table.Th>Фасады</Table.Th>
                     <Table.Th>Сумма / аванс</Table.Th>

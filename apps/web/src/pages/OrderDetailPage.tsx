@@ -45,9 +45,11 @@ import {
   orderGet,
   orderMove,
   orderPrintXlsxPath,
+  orderSetWorkState,
   orderUpdate,
   type OrderUpdatePayload,
 } from "../api/orders";
+import { orderWorkStatesList } from "../api/order-work-states";
 import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
@@ -62,6 +64,7 @@ import {
   type CreateOrderFormValues,
 } from "../lib/order-form";
 import dayjs from "dayjs";
+import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import "./OrderDetailPage.css";
 
 function InfoCard({
@@ -119,6 +122,11 @@ export function OrderDetailPage() {
   });
 
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
+  const workStates = useQuery({
+    queryKey: ["order-work-states"],
+    queryFn: orderWorkStatesList,
+    enabled: canWorkWithOrder,
+  });
   const customers = useQuery({
     queryKey: ["customers"],
     queryFn: customersList,
@@ -233,6 +241,14 @@ export function OrderDetailPage() {
     },
   });
 
+  const workStateMut = useMutation({
+    mutationFn: (workStateId: string) => orderSetWorkState(orderId!, workStateId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["order", orderId] });
+      void qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: () => orderDelete(orderId!),
     onSuccess: () => {
@@ -280,6 +296,9 @@ export function OrderDetailPage() {
               <Title order={2}>№{o.orderNumberFormatted}</Title>
               <Badge size="lg" variant="light">
                 {o.currentStage.name}
+              </Badge>
+              <Badge size="lg" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+                {o.workState.name}
               </Badge>
             </Group>
             <Text c="dimmed">
@@ -351,26 +370,42 @@ export function OrderDetailPage() {
               ) : null}
             </Group>
             {canWorkWithOrder ? (
-              <Group gap="xs" className="order-detail-move-row">
-                <Select
-                  placeholder="Переместить на…"
-                  data={stageOptions.filter((s) => s.value !== o.currentStage.id)}
-                  value={moveStageId}
-                  onChange={setMoveStageId}
-                  w={220}
-                  size="sm"
-                />
-                <Button
-                  size="sm"
-                  disabled={!moveStageId}
-                  loading={moveMut.isPending}
-                  onClick={() => {
-                    if (moveStageId) moveMut.mutate(moveStageId);
-                  }}
-                >
-                  Переместить
-                </Button>
-              </Group>
+              <Stack gap="xs" className="order-detail-move-row" align="flex-end">
+                <Group gap="xs" wrap="wrap" justify="flex-end">
+                  <Select
+                    placeholder="Переместить на…"
+                    data={stageOptions.filter((s) => s.value !== o.currentStage.id)}
+                    value={moveStageId}
+                    onChange={setMoveStageId}
+                    w={220}
+                    size="sm"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!moveStageId}
+                    loading={moveMut.isPending}
+                    onClick={() => {
+                      if (moveStageId) moveMut.mutate(moveStageId);
+                    }}
+                  >
+                    Переместить
+                  </Button>
+                </Group>
+                {workStates.data ? (
+                  <Select
+                    label="На участке"
+                    data={workStates.data.orderWorkStates.map((w) => ({ value: w.id, label: w.name }))}
+                    value={o.workState.id}
+                    onChange={(wsId) => {
+                      if (wsId && wsId !== o.workState.id) workStateMut.mutate(wsId);
+                    }}
+                    disabled={workStateMut.isPending}
+                    allowDeselect={false}
+                    w={280}
+                    size="sm"
+                  />
+                ) : null}
+              </Stack>
             ) : null}
           </Stack>
         </Group>

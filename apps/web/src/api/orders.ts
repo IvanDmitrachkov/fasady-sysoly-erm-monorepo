@@ -1,4 +1,5 @@
 import { apiJson } from "./http";
+import type { OrderWorkStateDto } from "./order-work-states";
 import type { StageDto } from "./stages";
 
 export type CustomerDto = {
@@ -7,7 +8,7 @@ export type CustomerDto = {
   phone: string | null;
   deliveryAddress: string | null;
 };
-export type { StageDto };
+export type { OrderWorkStateDto, StageDto };
 
 export type FacadeTypeSnippet = {
   id: string;
@@ -64,6 +65,7 @@ export type OrderDto = {
 
   customer: CustomerDto;
   currentStage: StageDto;
+  workState: OrderWorkStateDto;
   facades: FacadeDto[];
 };
 
@@ -78,6 +80,13 @@ export function orderMove(orderId: string, stageId: string) {
   return apiJson<{ order: OrderDto }>(`/api/orders/${orderId}/move`, {
     method: "POST",
     body: JSON.stringify({ stageId }),
+  });
+}
+
+export function orderSetWorkState(orderId: string, workStateId: string) {
+  return apiJson<{ order: OrderDto }>(`/api/orders/${orderId}/work-state`, {
+    method: "POST",
+    body: JSON.stringify({ workStateId }),
   });
 }
 

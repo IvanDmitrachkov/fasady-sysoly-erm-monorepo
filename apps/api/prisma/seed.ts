@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { resolveSqliteDatabaseUrl } from "../src/lib/database-url.js";
+import { DEFAULT_ORDER_WORK_STATES } from "../src/lib/default-order-work-states";
 import { DEFAULT_STAGES } from "../src/lib/default-stages";
 
 if (process.env.DATABASE_URL) {
@@ -16,6 +17,14 @@ async function main() {
       where: { slug: s.slug },
       create: { ...s },
       update: { name: s.name, sortOrder: s.sortOrder, isComplete: s.isComplete },
+    });
+  }
+
+  for (const w of DEFAULT_ORDER_WORK_STATES) {
+    await prisma.orderWorkState.upsert({
+      where: { slug: w.slug },
+      create: { id: w.id, slug: w.slug, name: w.name, sortOrder: w.sortOrder },
+      update: { name: w.name, sortOrder: w.sortOrder },
     });
   }
 

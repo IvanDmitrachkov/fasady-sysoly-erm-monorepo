@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Divider, Group, Modal, Paper, ScrollArea, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Badge, Button, Divider, Group, Modal, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { IconCalendarDue, IconCash, IconExternalLink, IconPackage, IconUser } from "@tabler/icons-react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Link, useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
-import { orderMove, ordersList, type OrderDto } from "../api/orders";
+import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
+import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
+import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 
@@ -46,6 +48,11 @@ export function OrdersBoardPage() {
 
   const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersList() });
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
+  const workStates = useQuery({
+    queryKey: ["order-work-states"],
+    queryFn: orderWorkStatesList,
+    enabled: canMove,
+  });
 
   const byStage = useMemo(() => {
     const map = new Map<string, OrderDto[]>();
@@ -80,6 +87,44 @@ export function OrdersBoardPage() {
       qc.setQueryData(["order", data.order.id], data);
     },
   });
+
+  const workStateMut = useMutation({
+    mutationFn: ({ id, workStateId }: { id: string; workStateId: string }) => orderSetWorkState(id, workStateId),
+    onMutate: async ({ id, workStateId }) => {
+      await qc.cancelQueries({ queryKey: ["orders"] });
+      const previous = qc.getQueryData<OrdersListData>(["orders"]);
+      const ws = workStates.data?.orderWorkStates.find((w) => w.id === workStateId);
+      if (previous && ws) {
+        qc.setQueryData<OrdersListData>(["orders"], {
+          orders: previous.orders.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  workState: { id: ws.id, slug: ws.slug, name: ws.name, sortOrder: ws.sortOrder },
+                }
+              : o,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        qc.setQueryData<OrdersListData>(["orders"], context.previous);
+      }
+    },
+    onSuccess: (data) => {
+      qc.setQueryData<OrdersListData>(["orders"], (current) =>
+        current
+          ? { orders: current.orders.map((o) => (o.id === data.order.id ? data.order : o)) }
+          : current,
+      );
+      qc.setQueryData(["order", data.order.id], data);
+    },
+  });
+
+  const workStateSelectData =
+    workStates.data?.orderWorkStates.map((w) => ({ value: w.id, label: w.name })) ?? [];
 
   const onDragEnd = (result: DropResult) => {
     if (!canMove) return;
@@ -172,6 +217,30 @@ export function OrdersBoardPage() {
                               <Text size="xs" c="dimmed" lineClamp={2}>
                                 {o.customer.name}
                               </Text>
+                              {canMove && workStateSelectData.length > 0 ? (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  role="presentation"
+                                >
+                                  <Select
+                                    size="xs"
+                                    data={workStateSelectData}
+                                    value={o.workState.id}
+                                    onChange={(wsId) => {
+                                      if (wsId && wsId !== o.workState.id) {
+                                        workStateMut.mutate({ id: o.id, workStateId: wsId });
+                                      }
+                                    }}
+                                    disabled={workStateMut.isPending}
+                                    allowDeselect={false}
+                                  />
+                                </div>
+                              ) : (
+                                <Badge size="xs" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+                                  {o.workState.name}
+                                </Badge>
+                              )}
                               {o.deadlineAt ? (
                                 <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text>
                               ) : null}
@@ -237,7 +306,12 @@ export function OrdersBoardPage() {
                   </Text>
                 ) : null}
               </Stack>
-              <Badge variant="light">{previewOrder.currentStage.name}</Badge>
+              <Group gap="xs">
+                <Badge variant="light">{previewOrder.currentStage.name}</Badge>
+                <Badge variant="light" color={orderWorkStateBadgeColor(previewOrder.workState.slug)}>
+                  {previewOrder.workState.name}
+                </Badge>
+              </Group>
             </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>

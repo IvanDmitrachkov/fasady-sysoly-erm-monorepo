@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { ordersList } from "../api/orders";
 import { money } from "../lib/order-form";
+import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import "./OrdersArchivePage.css";
 
 export function OrdersArchivePage() {
@@ -32,7 +33,12 @@ export function OrdersArchivePage() {
           ) : null}
         </Table.Td>
         <Table.Td>
-          <Badge variant="light">{o.currentStage.name}</Badge>
+          <Group gap={6} wrap="wrap">
+            <Badge variant="light">{o.currentStage.name}</Badge>
+            <Badge variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+              {o.workState.name}
+            </Badge>
+          </Group>
           <Text size="xs" c="dimmed" mt={4}>
             {o.completedAt ? dayjs(o.completedAt).format("DD.MM.YY HH:mm") : "дата завершения не указана"}
           </Text>
@@ -81,7 +87,12 @@ export function OrdersArchivePage() {
                 создан {dayjs(o.createdAt).format("DD.MM.YY")}
               </Text>
             </div>
-            <Badge variant="light">{o.currentStage.name}</Badge>
+            <Group gap={4}>
+              <Badge variant="light">{o.currentStage.name}</Badge>
+              <Badge variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+                {o.workState.name}
+              </Badge>
+            </Group>
           </Group>
           <div>
             <Text fw={500} size="sm" lineClamp={1}>
