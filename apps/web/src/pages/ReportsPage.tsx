@@ -228,6 +228,7 @@ export function ReportsPage() {
   const millingOptions = (report.data?.filters.millingLabels ?? []).map((m) => ({ value: m, label: m }));
   const colorOptions = (report.data?.filters.colors ?? []).map((c) => ({ value: c, label: c }));
   const customerOptions = (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const customerSelectOptions = [{ value: "__all__", label: "Все заказчики" }, ...customerOptions];
   const activeFilters = [
     customerId ? { key: "customer", label: `Заказчик: ${customerOptions.find((c) => c.value === customerId)?.label ?? "Выбран"}` } : null,
     coatingTypeId ? { key: "coating", label: `Покрытие: ${coatingOptions.find((c) => c.value === coatingTypeId)?.label ?? "Выбрано"}` } : null,
@@ -440,11 +441,9 @@ export function ReportsPage() {
             />
             <Select
               label="Заказчик"
-              placeholder="Все"
-              data={customerOptions}
-              value={customerId}
-              onChange={setCustomerId}
-              clearable
+              data={customerSelectOptions}
+              value={customerId ?? "__all__"}
+              onChange={(value) => setCustomerId(value === "__all__" ? null : value)}
               w="100%"
               searchable
             />
