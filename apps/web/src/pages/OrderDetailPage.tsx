@@ -64,7 +64,7 @@ import {
   type CreateOrderFormValues,
 } from "../lib/order-form";
 import dayjs from "dayjs";
-import { orderWorkStateBadgeColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
+import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import "./OrderDetailPage.css";
 
 function InfoCard({
@@ -199,6 +199,10 @@ export function OrderDetailPage() {
     if (!stages.data) return [];
     return stages.data.stages.map((s) => ({ value: s.id, label: s.name }));
   }, [stages.data]);
+  const workStateSlugById = useMemo(
+    () => new Map((workStates.data?.orderWorkStates ?? []).map((w) => [w.id, w.slug])),
+    [workStates.data],
+  );
 
   const editForm = useForm<CreateOrderFormValues>({
     resolver: zodResolver(createOrderFormSchema),
@@ -407,6 +411,11 @@ export function OrderDetailPage() {
                     disabled={workStateMut.isPending}
                     allowDeselect={false}
                     styles={{ input: orderWorkStateSelectStyles(o.workState.slug) }}
+                    renderOption={({ option }) => (
+                      <Text size="sm" style={{ color: orderWorkStateOptionTextColor(workStateSlugById.get(option.value)) }}>
+                        {option.label}
+                      </Text>
+                    )}
                     w={280}
                     size="sm"
                   />

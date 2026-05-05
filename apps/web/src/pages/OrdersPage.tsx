@@ -7,7 +7,7 @@ import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { money } from "../lib/order-form";
-import { orderWorkStateBadgeColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
+import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import dayjs from "dayjs";
 import "./OrdersPage.css";
 
@@ -40,6 +40,10 @@ export function OrdersPage() {
 
   const workStateOptions = useMemo(
     () => (workStates.data?.orderWorkStates ?? []).map((w) => ({ value: w.id, label: w.name })),
+    [workStates.data],
+  );
+  const workStateSlugById = useMemo(
+    () => new Map((workStates.data?.orderWorkStates ?? []).map((w) => [w.id, w.slug])),
     [workStates.data],
   );
 
@@ -85,6 +89,11 @@ export function OrdersPage() {
         allowDeselect={false}
         disabled={workStateMut.isPending || workStateOptions.length === 0}
         styles={{ input: orderWorkStateSelectStyles(order.workState.slug) }}
+        renderOption={({ option }) => (
+          <Text size="sm" style={{ color: orderWorkStateOptionTextColor(workStateSlugById.get(option.value)) }}>
+            {option.label}
+          </Text>
+        )}
         w={fullWidth ? "100%" : 200}
       />
     ) : (
