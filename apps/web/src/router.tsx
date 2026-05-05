@@ -4,6 +4,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardHome } from "./pages/DashboardHome";
 import { OrdersPage } from "./pages/OrdersPage";
 import { OrdersBoardPage } from "./pages/OrdersBoardPage";
+import { OrdersStationBoardPage } from "./pages/OrdersStationBoardPage";
 import { OrdersArchivePage } from "./pages/OrdersArchivePage";
 import { OrderCreatePage } from "./pages/OrderCreatePage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
@@ -39,6 +40,7 @@ export const router = createBrowserRouter(
           children: [
             { index: true, element: <DashboardHome /> },
             { path: "orders/board", element: <OrdersBoardPage /> },
+            { path: "orders/board/station", element: <OrdersStationBoardPage /> },
             { path: "orders/archive", element: <OrdersArchivePage /> },
             { path: "orders/new", element: <OrderCreatePage /> },
             { path: "orders/:orderId/cutting", element: <OrderCuttingPage /> },

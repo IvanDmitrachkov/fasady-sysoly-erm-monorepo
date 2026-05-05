@@ -16,6 +16,7 @@ export function OrdersPage() {
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const canMoveOrder = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
+  const canStationBoard = canMoveOrder;
 
   const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersList() });
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList });
@@ -243,8 +244,13 @@ export function OrdersPage() {
         <Group gap="sm">
           <Title order={3}>Заказы</Title>
           <Button component={Link} to="/orders/board" variant="light" size="sm">
-            Канбан
+            По цеху
           </Button>
+          {canStationBoard ? (
+            <Button component={Link} to="/orders/board/station" variant="light" size="sm">
+              На участке
+            </Button>
+          ) : null}
           <Button component={Link} to="/orders/archive" variant="light" size="sm">
             Архив
           </Button>

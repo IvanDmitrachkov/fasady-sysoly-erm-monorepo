@@ -1,19 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Divider, Group, Modal, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { IconCalendarDue, IconCash, IconExternalLink, IconPackage, IconUser } from "@tabler/icons-react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
-import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
+import { ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 
+const STATION_STAGE_LS_KEY = "erm_station_board_stage_id";
+
 type OrdersListData = Awaited<ReturnType<typeof ordersList>>;
-type MoveVariables = { id: string; stageId: string; previous?: OrdersListData };
 
 function PreviewField({
   icon,
@@ -39,11 +40,13 @@ function PreviewField({
   );
 }
 
-export function OrdersBoardPage() {
+export function OrdersStationBoardPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [previewOrder, setPreviewOrder] = useState<OrderDto | null>(null);
+
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
+  const isCustomer = me.data?.user.role === "CUSTOMER";
   const canMove = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
 
   const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersList() });
@@ -51,42 +54,52 @@ export function OrdersBoardPage() {
   const workStates = useQuery({
     queryKey: ["order-work-states"],
     queryFn: orderWorkStatesList,
-    enabled: canMove,
+    enabled: canMove && !isCustomer,
   });
 
-  const byStage = useMemo(() => {
-    const map = new Map<string, OrderDto[]>();
-    for (const s of stages.data?.stages ?? []) {
-      map.set(s.id, []);
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STATION_STAGE_LS_KEY);
+    } catch {
+      return null;
     }
-    for (const o of orders.data?.orders ?? []) {
-      const list = map.get(o.currentStage.id);
+  });
+
+  useEffect(() => {
+    const list = stages.data?.stages;
+    if (!list?.length) return;
+    const ok = selectedStageId && list.some((s) => s.id === selectedStageId);
+    if (!ok) {
+      setSelectedStageId(list[0]!.id);
+    }
+  }, [stages.data, selectedStageId]);
+
+  useEffect(() => {
+    if (!selectedStageId) return;
+    try {
+      localStorage.setItem(STATION_STAGE_LS_KEY, selectedStageId);
+    } catch {
+      /* ignore */
+    }
+  }, [selectedStageId]);
+
+  const ordersOnStage = useMemo(() => {
+    if (!selectedStageId || !orders.data) return [];
+    return orders.data.orders.filter((o) => o.currentStage.id === selectedStageId);
+  }, [orders.data, selectedStageId]);
+
+  const byWorkState = useMemo(() => {
+    const map = new Map<string, OrderDto[]>();
+    for (const w of workStates.data?.orderWorkStates ?? []) {
+      map.set(w.id, []);
+    }
+    for (const o of ordersOnStage) {
+      const list = map.get(o.workState.id);
       if (list) list.push(o);
-      else map.set(o.currentStage.id, [o]);
+      else map.set(o.workState.id, [o]);
     }
     return map;
-  }, [orders.data, stages.data]);
-
-  const moveMut = useMutation({
-    mutationFn: ({ id, stageId }: MoveVariables) => orderMove(id, stageId),
-    onMutate: ({ previous }) => {
-      void qc.cancelQueries({ queryKey: ["orders"] });
-      return { previous };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previous) {
-        qc.setQueryData<OrdersListData>(["orders"], context.previous);
-      }
-    },
-    onSuccess: (data) => {
-      qc.setQueryData<OrdersListData>(["orders"], (current) =>
-        current
-          ? { orders: current.orders.map((o) => (o.id === data.order.id ? data.order : o)) }
-          : current,
-      );
-      qc.setQueryData(["order", data.order.id], data);
-    },
-  });
+  }, [ordersOnStage, workStates.data]);
 
   const workStateMut = useMutation({
     mutationFn: ({ id, workStateId }: { id: string; workStateId: string }) => orderSetWorkState(id, workStateId),
@@ -123,9 +136,6 @@ export function OrdersBoardPage() {
     },
   });
 
-  const workStateSelectData =
-    workStates.data?.orderWorkStates.map((w) => ({ value: w.id, label: w.name })) ?? [];
-
   const onDragEnd = (result: DropResult) => {
     if (!canMove) return;
     const { destination, source, draggableId } = result;
@@ -133,43 +143,51 @@ export function OrdersBoardPage() {
     if (destination.droppableId === source.droppableId) return;
 
     const previous = qc.getQueryData<OrdersListData>(["orders"]);
-    const nextStage = stages.data?.stages.find((s) => s.id === destination.droppableId);
-
-    if (previous && nextStage) {
+    const ws = workStates.data?.orderWorkStates.find((w) => w.id === destination.droppableId);
+    if (previous && ws) {
       qc.setQueryData<OrdersListData>(["orders"], {
-        orders: previous.orders.map((o) => (o.id === draggableId ? { ...o, currentStage: nextStage } : o)),
+        orders: previous.orders.map((o) =>
+          o.id === draggableId
+            ? {
+                ...o,
+                workState: { id: ws.id, slug: ws.slug, name: ws.name, sortOrder: ws.sortOrder },
+              }
+            : o,
+        ),
       });
     }
 
-    moveMut.mutate({ id: draggableId, stageId: destination.droppableId, previous });
+    workStateMut.mutate({ id: draggableId, workStateId: destination.droppableId });
   };
 
+  const stageSelectData = useMemo(
+    () => (stages.data?.stages ?? []).map((s) => ({ value: s.id, label: s.name })),
+    [stages.data],
+  );
+
+  const selectedStageName = stages.data?.stages.find((s) => s.id === selectedStageId)?.name;
+
   const columns =
-    stages.data?.stages.map((stage) => {
-      const list = byStage.get(stage.id) ?? [];
+    workStates.data?.orderWorkStates.map((ws) => {
+      const list = byWorkState.get(ws.id) ?? [];
       return (
         <Paper
-          key={stage.id}
+          key={ws.id}
           shadow="sm"
           p="md"
           radius="md"
           withBorder
-          style={{ flex: "0 0 280px", maxHeight: "70vh", display: "flex", flexDirection: "column" }}
+          style={{ flex: "0 0 260px", maxHeight: "70vh", display: "flex", flexDirection: "column" }}
         >
           <Group justify="space-between" mb="xs" wrap="nowrap">
-            <Text fw={700} size="sm" lineClamp={2}>
-              {stage.name}
-            </Text>
+            <Badge variant="light" color={orderWorkStateBadgeColor(ws.slug)} size="lg">
+              {ws.name}
+            </Badge>
             <Text size="xs" c="dimmed">
               {list.length}
             </Text>
           </Group>
-          {stage.isComplete ? (
-            <Text size="xs" c="teal" mb="xs">
-              Финальный этап
-            </Text>
-          ) : null}
-          <Droppable droppableId={stage.id}>
+          <Droppable droppableId={ws.id}>
             {(dropProvided) => (
               <Stack
                 gap="sm"
@@ -209,44 +227,18 @@ export function OrdersBoardPage() {
                           }}
                           onClick={() => setPreviewOrder(o)}
                         >
-                          <Group gap="xs" align="flex-start" wrap="nowrap">
-                            <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-                              <Text fw={600} size="sm" c="brand.6">
-                                №{o.orderNumberFormatted}
-                              </Text>
-                              <Text size="xs" c="dimmed" lineClamp={2}>
-                                {o.customer.name}
-                              </Text>
-                              {canMove && workStateSelectData.length > 0 ? (
-                                <div
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => e.stopPropagation()}
-                                  role="presentation"
-                                >
-                                  <Select
-                                    size="xs"
-                                    data={workStateSelectData}
-                                    value={o.workState.id}
-                                    onChange={(wsId) => {
-                                      if (wsId && wsId !== o.workState.id) {
-                                        workStateMut.mutate({ id: o.id, workStateId: wsId });
-                                      }
-                                    }}
-                                    disabled={workStateMut.isPending}
-                                    allowDeselect={false}
-                                  />
-                                </div>
-                              ) : (
-                                <Badge size="xs" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
-                                  {o.workState.name}
-                                </Badge>
-                              )}
-                              {o.deadlineAt ? (
-                                <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text>
-                              ) : null}
-                              <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
-                            </Stack>
-                          </Group>
+                          <Stack gap={4}>
+                            <Text fw={600} size="sm" c="brand.6">
+                              №{o.orderNumberFormatted}
+                            </Text>
+                            <Text size="xs" c="dimmed" lineClamp={2}>
+                              {o.customer.name}
+                            </Text>
+                            {o.deadlineAt ? (
+                              <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text>
+                            ) : null}
+                            <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
+                          </Stack>
                         </Paper>
                       </div>
                     )}
@@ -260,31 +252,54 @@ export function OrdersBoardPage() {
       );
     }) ?? null;
 
+  if (me.isPending) {
+    return <Text c="dimmed">Загрузка…</Text>;
+  }
+
+  if (isCustomer) {
+    return <Navigate to="/orders" replace />;
+  }
+
   return (
     <>
-      <Group justify="space-between" mb="md" wrap="wrap">
+      <Group justify="space-between" mb="md" wrap="wrap" align="flex-end">
+        <Stack gap="xs" style={{ flex: 1, minWidth: 220 }}>
+          <Title order={3}>На участке</Title>
+          <Select
+            label="Точка (этап)"
+            placeholder="Выберите этап"
+            data={stageSelectData}
+            value={selectedStageId}
+            onChange={(id) => setSelectedStageId(id)}
+            searchable
+            maxDropdownHeight={280}
+            maw={420}
+          />
+          {selectedStageName ? (
+            <Text size="sm" c="dimmed">
+              Заказы на этапе «{selectedStageName}»: карточки перетаскивайте между колонками под-статусов.
+            </Text>
+          ) : null}
+        </Stack>
         <Group gap="sm">
-          <Title order={3}>По цеху</Title>
+          <Button component={Link} to="/orders/board" variant="light" size="sm">
+            По цеху
+          </Button>
           <Button component={Link} to="/orders" variant="light" size="sm">
             Список
           </Button>
-          {canMove ? (
-            <Button component={Link} to="/orders/board/station" variant="light" size="sm">
-              На участке
-            </Button>
-          ) : null}
           <Button component={Link} to="/orders/archive" variant="light" size="sm">
             Архив
           </Button>
         </Group>
       </Group>
 
-      {orders.isPending || stages.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
+      {orders.isPending || stages.isPending || workStates.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
       {orders.isError ? (
         <Text c="red">{orders.error instanceof Error ? orders.error.message : "Ошибка"}</Text>
       ) : null}
 
-      {stages.data && columns ? (
+      {workStates.data && columns ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <ScrollArea type="scroll" offsetScrollbars>
             <Group align="flex-start" wrap="nowrap" gap="md" pb="md" style={{ minHeight: 360 }}>

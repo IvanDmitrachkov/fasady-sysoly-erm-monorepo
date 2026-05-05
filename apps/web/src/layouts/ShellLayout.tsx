@@ -30,6 +30,7 @@ import {
   IconFolders,
   IconHelpCircle,
   IconHome2,
+  IconLayoutColumns,
   IconLayoutKanban,
   IconLogout,
   IconMenu2,
@@ -138,7 +139,8 @@ export function ShellLayout() {
       !newOrderNavActive &&
       !rel.startsWith("/orders/board") &&
       !rel.startsWith("/orders/archive"));
-  const kanbanNavActive = rel === "/orders/board";
+  const boardShopFloorActive = rel === "/orders/board";
+  const boardStationActive = rel === "/orders/board/station";
   const archiveNavActive = rel === "/orders/archive";
   const timeReportNavActive = rel === "/time-report";
   const reportsNavActive = rel === "/reports";
@@ -164,6 +166,7 @@ export function ShellLayout() {
   const user = me.data?.user;
   const isAdmin = user?.role === "ADMIN";
   const canCreateOrder = user?.role === "ADMIN";
+  const canStationBoard = user?.role === "ADMIN" || user?.role === "WORKER";
   const canTimeReport = user?.role === "ADMIN" || user?.role === "WORKER";
   const isDark = computedColorScheme === "dark";
   const logout = () => {
@@ -274,13 +277,23 @@ export function ShellLayout() {
               styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
             />
             <NavLink
-              label={navbarCollapsed ? null : "Канбан"}
+              label={navbarCollapsed ? null : "По цеху"}
               component={RouterLink}
               to="/orders/board"
-              active={kanbanNavActive}
+              active={boardShopFloorActive}
               leftSection={navIcon(<IconLayoutKanban size={16} />, "cyan")}
               styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
             />
+            {canStationBoard ? (
+              <NavLink
+                label={navbarCollapsed ? null : "На участке"}
+                component={RouterLink}
+                to="/orders/board/station"
+                active={boardStationActive}
+                leftSection={navIcon(<IconLayoutColumns size={16} />, "cyan")}
+                styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
+              />
+            ) : null}
             <NavLink
               label={navbarCollapsed ? null : "Архив"}
               component={RouterLink}
@@ -538,11 +551,19 @@ export function ShellLayout() {
             icon={<IconShoppingCart size={18} />}
           />
           <MobileBottomAction
-            label="Канбан"
+            label="По цеху"
             to="/orders/board"
-            active={kanbanNavActive}
+            active={boardShopFloorActive}
             icon={<IconLayoutKanban size={18} />}
           />
+          {canStationBoard ? (
+            <MobileBottomAction
+              label="На участке"
+              to="/orders/board/station"
+              active={boardStationActive}
+              icon={<IconLayoutColumns size={18} />}
+            />
+          ) : null}
           {canCreateOrder ? (
             <MobileBottomAction
               label="Новый заказ"

@@ -161,7 +161,7 @@ export function OrdersArchivePage() {
             Активные
           </Button>
           <Button component={Link} to="/orders/board" variant="light" size="sm">
-            Канбан
+            По цеху
           </Button>
         </Group>
       </Group>

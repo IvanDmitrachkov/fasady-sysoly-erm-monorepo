@@ -319,8 +319,13 @@ export function OrderDetailPage() {
                 size="sm"
                 leftSection={<IconLayoutKanban size={16} />}
               >
-                Канбан
+                По цеху
               </Button>
+              {canWorkWithOrder ? (
+                <Button component={Link} to="/orders/board/station" variant="light" size="sm">
+                  На участке
+                </Button>
+              ) : null}
               {canWorkWithOrder ? (
                 <>
                   <Button
