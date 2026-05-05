@@ -1,6 +1,5 @@
 import { Badge, Group, Paper, Stack, Text } from "@mantine/core";
 import dayjs from "dayjs";
-import { money } from "../lib/order-form";
 import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import type { OrderDto } from "../api/orders";
 import "./OrderKanbanCard.css";
@@ -77,7 +76,6 @@ export function OrderKanbanCard({
         <Stack gap={6}>
           <MetaRow label="Дедлайн" value={order.deadlineAt ? dayjs(order.deadlineAt).format("D MMM YYYY") : "Не указан"} />
           <MetaRow label="Площадь" value={`${order.facadeAreaTotal} м2`} />
-          <MetaRow label="Сумма" value={order.totalCost != null ? money.format(order.totalCost) : "Не указана"} />
         </Stack>
       </Stack>
     </Paper>
