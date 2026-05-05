@@ -11,10 +11,25 @@ import { stagesList } from "../api/stages";
 import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
+import { OrderKanbanCard } from "../components/OrderKanbanCard";
+import "./OrdersKanban.css";
 
 const STATION_STAGE_LS_KEY = "erm_station_board_stage_id";
 
 type OrdersListData = Awaited<ReturnType<typeof ordersList>>;
+
+function workStateAccentColor(slug: string): string {
+  switch (orderWorkStateBadgeColor(slug)) {
+    case "blue":
+      return "var(--mantine-color-blue-5)";
+    case "green":
+      return "var(--mantine-color-green-5)";
+    case "red":
+      return "var(--mantine-color-red-5)";
+    default:
+      return "var(--mantine-color-gray-5)";
+  }
+}
 
 function PreviewField({
   icon,
@@ -173,16 +188,26 @@ export function OrdersStationBoardPage() {
     <Paper
       key="single-stage-column"
       shadow="sm"
-      p="md"
+      p="xs"
       radius="md"
       withBorder
-      style={{ flex: "0 0 320px", maxHeight: "70vh", display: "flex", flexDirection: "column" }}
+      className="order-kanban-column"
+      style={{
+        ["--kanban-column-accent" as string]: "var(--mantine-color-blue-5)",
+        flex: "0 0 320px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "visible",
+      }}
     >
-      <Group justify="space-between" mb="xs" wrap="nowrap">
-        <Badge variant="light" color="gray" size="lg">
-          Заказы
-        </Badge>
-        <Text size="xs" c="dimmed">
+      <Group justify="space-between" wrap="nowrap" className="order-kanban-column__header" gap="xs">
+        <Group gap="xs" wrap="nowrap" className="order-kanban-column__title-wrap">
+          <span className="order-kanban-column__accent" />
+          <Text className="order-kanban-column__title" lineClamp={1}>
+            Заказы
+          </Text>
+        </Group>
+        <Text className="order-kanban-column__count">
           {ordersOnStage.length}
         </Text>
       </Group>
@@ -190,27 +215,21 @@ export function OrdersStationBoardPage() {
         gap="sm"
         style={{
           flex: 1,
-          overflowY: "auto",
           minHeight: 120,
-          paddingBottom: 4,
+          padding: "6px 4px 10px",
         }}
       >
         {ordersOnStage.map((o) => (
-          <Paper key={o.id} p="sm" withBorder radius="md" onClick={() => setPreviewOrder(o)}>
-            <Stack gap={4}>
-              <Text fw={600} size="sm" c="brand.6">
-                №{o.orderNumberFormatted}
-              </Text>
-              <Text size="xs" c="dimmed" lineClamp={2}>
-                {o.customer.name}
-              </Text>
-              <Badge size="xs" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+          <OrderKanbanCard
+            key={o.id}
+            order={o}
+            onClick={() => setPreviewOrder(o)}
+            statusSlot={
+              <Badge size="sm" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
                 {o.workState.name}
               </Badge>
-              {o.deadlineAt ? <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text> : null}
-              <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
-            </Stack>
-          </Paper>
+            }
+          />
         ))}
       </Stack>
     </Paper>
@@ -221,16 +240,26 @@ export function OrdersStationBoardPage() {
         <Paper
           key={ws.id}
           shadow="sm"
-          p="md"
+          p="xs"
           radius="md"
           withBorder
-          style={{ flex: "0 0 260px", maxHeight: "70vh", display: "flex", flexDirection: "column" }}
+          className="order-kanban-column"
+          style={{
+            ["--kanban-column-accent" as string]: workStateAccentColor(ws.slug),
+            flex: "0 0 260px",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "visible",
+          }}
         >
-          <Group justify="space-between" mb="xs" wrap="nowrap">
-            <Badge variant="light" color={orderWorkStateBadgeColor(ws.slug)} size="lg">
-              {ws.name}
-            </Badge>
-            <Text size="xs" c="dimmed">
+          <Group justify="space-between" wrap="nowrap" className="order-kanban-column__header" gap="xs">
+            <Group gap="xs" wrap="nowrap" className="order-kanban-column__title-wrap">
+              <span className="order-kanban-column__accent" />
+              <Text className="order-kanban-column__title" lineClamp={1}>
+                {ws.name}
+              </Text>
+            </Group>
+            <Text className="order-kanban-column__count">
               {list.length}
             </Text>
           </Group>
@@ -242,9 +271,8 @@ export function OrdersStationBoardPage() {
                 {...dropProvided.droppableProps}
                 style={{
                   flex: 1,
-                  overflowY: "auto",
                   minHeight: 120,
-                  paddingBottom: 4,
+                  padding: "6px 4px 10px",
                 }}
               >
                 {list.map((o, index) => (
@@ -260,33 +288,11 @@ export function OrdersStationBoardPage() {
                           cursor: canMove ? (snapshot.isDragging ? "grabbing" : "grab") : "pointer",
                         }}
                       >
-                        <Paper
-                          p="sm"
-                          withBorder
-                          radius="md"
-                          shadow={snapshot.isDragging ? "sm" : undefined}
-                          bg={snapshot.isDragging ? "var(--mantine-primary-color-light)" : "var(--mantine-color-body)"}
-                          style={{
-                            borderColor: snapshot.isDragging
-                              ? "var(--mantine-primary-color-filled)"
-                              : "var(--mantine-color-default-border)",
-                            transition: snapshot.isDragging ? undefined : "border-color 120ms ease, background 120ms ease",
-                          }}
+                        <OrderKanbanCard
+                          order={o}
+                          isDragging={snapshot.isDragging}
                           onClick={() => setPreviewOrder(o)}
-                        >
-                          <Stack gap={4}>
-                            <Text fw={600} size="sm" c="brand.6">
-                              №{o.orderNumberFormatted}
-                            </Text>
-                            <Text size="xs" c="dimmed" lineClamp={2}>
-                              {o.customer.name}
-                            </Text>
-                            {o.deadlineAt ? (
-                              <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text>
-                            ) : null}
-                            <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
-                          </Stack>
-                        </Paper>
+                        />
                       </div>
                     )}
                   </Draggable>
@@ -347,14 +353,14 @@ export function OrdersStationBoardPage() {
         allowWorkStatesOnStage ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <ScrollArea type="scroll" offsetScrollbars>
-            <Group align="flex-start" wrap="nowrap" gap="md" pb="md" style={{ minHeight: 360 }}>
+            <Group align="flex-start" wrap="nowrap" gap="sm" pb="xs" style={{ minHeight: 360 }}>
               {columns}
             </Group>
           </ScrollArea>
         </DragDropContext>
         ) : (
           <ScrollArea type="scroll" offsetScrollbars>
-            <Group align="flex-start" wrap="nowrap" gap="md" pb="md" style={{ minHeight: 360 }}>
+            <Group align="flex-start" wrap="nowrap" gap="sm" pb="xs" style={{ minHeight: 360 }}>
               {columns}
             </Group>
           </ScrollArea>
