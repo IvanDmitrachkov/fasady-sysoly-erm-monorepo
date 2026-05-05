@@ -1,7 +1,9 @@
 {
   "name": "fasady-sysoly-erm",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"yarn workspace @erm/api dev\" \"yarn workspace @erm/web dev\"",
     "dev:api": "yarn workspace @erm/api dev",

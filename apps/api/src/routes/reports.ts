@@ -14,13 +14,206 @@ const salesReportQuery = z.object({
   customerId: z.string().uuid().optional(),
 });
 
+const dashboardReportQuery = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+});
+
 function facadeAreaM2(f: { widthMm: number; heightMm: number; quantity?: number | null }): number {
   const quantity = f.quantity && f.quantity > 0 ? f.quantity : 1;
   return ((f.widthMm * f.heightMm) / 1_000_000) * quantity;
 }
 
+function trendPercent(current: number, previous: number): number {
+  if (previous === 0) {
+    if (current === 0) return 0;
+    return 100;
+  }
+  return ((current - previous) / previous) * 100;
+}
+
 export const reportsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", requireJwt);
+
+  app.get(
+    "/reports/dashboard",
+    { preHandler: [requireRoles(Role.ADMIN)] },
+    async (request, reply) => {
+      const q = dashboardReportQuery.safeParse(request.query);
+      if (!q.success) {
+        return reply.code(400).send({ error: "Некорректные параметры", details: q.error.flatten() });
+      }
+
+      const from = new Date(q.data.from);
+      const to = new Date(q.data.to);
+      if (from > to) {
+        return reply.code(400).send({ error: "Начало периода позже конца" });
+      }
+
+      const rangeMs = to.getTime() - from.getTime();
+      const prevTo = new Date(from.getTime() - 1);
+      const prevFrom = new Date(prevTo.getTime() - rangeMs);
+
+      const [ordersCurrent, ordersPrevious, facadesCurrent, facadesPrevious, timeCurrent, timePrevious] =
+        await Promise.all([
+          app.prisma.order.findMany({
+            where: {
+              deletedAt: null,
+              completedAt: { gte: from, lte: to },
+            },
+            select: {
+              id: true,
+              completedAt: true,
+              totalCost: true,
+            },
+          }),
+          app.prisma.order.findMany({
+            where: {
+              deletedAt: null,
+              completedAt: { gte: prevFrom, lte: prevTo },
+            },
+            select: {
+              id: true,
+              totalCost: true,
+            },
+          }),
+          app.prisma.facade.findMany({
+            where: {
+              order: {
+                is: {
+                  deletedAt: null,
+                  completedAt: { gte: from, lte: to },
+                },
+              },
+            },
+            select: {
+              widthMm: true,
+              heightMm: true,
+              quantity: true,
+              order: { select: { completedAt: true } },
+            },
+          }),
+          app.prisma.facade.findMany({
+            where: {
+              order: {
+                is: {
+                  deletedAt: null,
+                  completedAt: { gte: prevFrom, lte: prevTo },
+                },
+              },
+            },
+            select: {
+              widthMm: true,
+              heightMm: true,
+              quantity: true,
+            },
+          }),
+          app.prisma.timeEntry.findMany({
+            where: {
+              workedAt: { gte: from, lte: to },
+            },
+            include: {
+              stage: { select: { id: true, name: true } },
+            },
+            orderBy: { workedAt: "asc" },
+          }),
+          app.prisma.timeEntry.findMany({
+            where: {
+              workedAt: { gte: prevFrom, lte: prevTo },
+            },
+            select: { minutes: true },
+          }),
+        ]);
+
+      const facadesCountCurrent = facadesCurrent.reduce((sum, f) => sum + (f.quantity && f.quantity > 0 ? f.quantity : 1), 0);
+      const facadesCountPrevious = facadesPrevious.reduce(
+        (sum, f) => sum + (f.quantity && f.quantity > 0 ? f.quantity : 1),
+        0,
+      );
+
+      const areaCurrent = facadesCurrent.reduce((sum, f) => sum + facadeAreaM2(f), 0);
+      const areaPrevious = facadesPrevious.reduce((sum, f) => sum + facadeAreaM2(f), 0);
+
+      const revenueCurrent = ordersCurrent.reduce((sum, o) => sum + (o.totalCost ?? 0), 0);
+      const revenuePrevious = ordersPrevious.reduce((sum, o) => sum + (o.totalCost ?? 0), 0);
+
+      const minutesCurrent = timeCurrent.reduce((sum, t) => sum + t.minutes, 0);
+      const minutesPrevious = timePrevious.reduce((sum, t) => sum + t.minutes, 0);
+
+      const dailyMap = new Map<string, { date: string; ordersCount: number; facadeCount: number; minutes: number }>();
+      for (let d = new Date(from); d <= to; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+        const key = d.toISOString().slice(0, 10);
+        dailyMap.set(key, { date: key, ordersCount: 0, facadeCount: 0, minutes: 0 });
+      }
+
+      for (const order of ordersCurrent) {
+        if (!order.completedAt) continue;
+        const key = order.completedAt.toISOString().slice(0, 10);
+        const row = dailyMap.get(key);
+        if (row) row.ordersCount += 1;
+      }
+      for (const facade of facadesCurrent) {
+        const completedAt = facade.order.completedAt;
+        if (!completedAt) continue;
+        const key = completedAt.toISOString().slice(0, 10);
+        const row = dailyMap.get(key);
+        if (row) row.facadeCount += facade.quantity && facade.quantity > 0 ? facade.quantity : 1;
+      }
+      for (const t of timeCurrent) {
+        const key = t.workedAt.toISOString().slice(0, 10);
+        const row = dailyMap.get(key);
+        if (row) row.minutes += t.minutes;
+      }
+
+      const stageMap = new Map<string, { stageId: string; stageName: string; minutes: number }>();
+      for (const t of timeCurrent) {
+        const prev = stageMap.get(t.stageId);
+        if (prev) {
+          prev.minutes += t.minutes;
+        } else {
+          stageMap.set(t.stageId, { stageId: t.stageId, stageName: t.stage.name, minutes: t.minutes });
+        }
+      }
+
+      return {
+        period: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+          previousFrom: prevFrom.toISOString(),
+          previousTo: prevTo.toISOString(),
+        },
+        kpis: {
+          ordersCount: {
+            value: ordersCurrent.length,
+            previous: ordersPrevious.length,
+            trendPercent: trendPercent(ordersCurrent.length, ordersPrevious.length),
+          },
+          facadeCount: {
+            value: facadesCountCurrent,
+            previous: facadesCountPrevious,
+            trendPercent: trendPercent(facadesCountCurrent, facadesCountPrevious),
+          },
+          areaM2: {
+            value: areaCurrent,
+            previous: areaPrevious,
+            trendPercent: trendPercent(areaCurrent, areaPrevious),
+          },
+          totalMinutes: {
+            value: minutesCurrent,
+            previous: minutesPrevious,
+            trendPercent: trendPercent(minutesCurrent, minutesPrevious),
+          },
+          totalRevenue: {
+            value: revenueCurrent,
+            previous: revenuePrevious,
+            trendPercent: trendPercent(revenueCurrent, revenuePrevious),
+          },
+        },
+        daily: [...dailyMap.values()],
+        stageBreakdown: [...stageMap.values()].sort((a, b) => b.minutes - a.minutes),
+      };
+    },
+  );
 
   app.get(
     "/reports/sales",
