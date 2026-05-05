@@ -157,12 +157,6 @@ export function OrdersArchivePage() {
       <Group justify="space-between" mb="md" wrap="wrap">
         <Group gap="sm">
           <Title order={3}>Архив заказов</Title>
-          <Button component={Link} to="/orders" variant="light" size="sm">
-            Активные
-          </Button>
-          <Button component={Link} to="/orders/board" variant="light" size="sm">
-            По цеху
-          </Button>
         </Group>
       </Group>
 

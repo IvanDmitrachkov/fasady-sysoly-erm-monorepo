@@ -278,17 +278,6 @@ export function OrdersBoardPage() {
       <Group justify="space-between" mb="md" wrap="wrap">
         <Group gap="sm">
           <Title order={3}>По цеху</Title>
-          <Button component={Link} to="/orders" variant="light" size="sm">
-            Список
-          </Button>
-          {canMove ? (
-            <Button component={Link} to="/orders/board/station" variant="light" size="sm">
-              На участке
-            </Button>
-          ) : null}
-          <Button component={Link} to="/orders/archive" variant="light" size="sm">
-            Архив
-          </Button>
         </Group>
       </Group>
 

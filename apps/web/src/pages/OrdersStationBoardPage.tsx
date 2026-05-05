@@ -334,17 +334,6 @@ export function OrdersStationBoardPage() {
             </Text>
           ) : null}
         </Stack>
-        <Group gap="sm">
-          <Button component={Link} to="/orders/board" variant="light" size="sm">
-            По цеху
-          </Button>
-          <Button component={Link} to="/orders" variant="light" size="sm">
-            Список
-          </Button>
-          <Button component={Link} to="/orders/archive" variant="light" size="sm">
-            Архив
-          </Button>
-        </Group>
       </Group>
 
       {orders.isPending || stages.isPending || (allowWorkStatesOnStage && workStates.isPending) ? (

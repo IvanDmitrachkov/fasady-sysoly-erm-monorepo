@@ -284,7 +284,7 @@ export function OrderDetailPage() {
 
   return (
     <>
-      <Paper withBorder p="md" radius="lg" mb="md">
+      <Paper withBorder p="md" radius="lg" mb="md" className="order-detail-header">
         <Group justify="space-between" align="flex-start" wrap="wrap">
           <Stack gap="xs">
             <Button
@@ -311,25 +311,8 @@ export function OrderDetailPage() {
             </Text>
           </Stack>
 
-          <Stack gap="sm" align="flex-end">
+          <Stack gap="sm" align="flex-end" className="order-detail-actions">
             <Group gap="xs" wrap="wrap" justify="flex-end">
-              <Button component={Link} to="/orders" variant="light" size="sm">
-                Список
-              </Button>
-              <Button
-                component={Link}
-                to="/orders/board"
-                variant="light"
-                size="sm"
-                leftSection={<IconLayoutKanban size={16} />}
-              >
-                По цеху
-              </Button>
-              {canWorkWithOrder ? (
-                <Button component={Link} to="/orders/board/station" variant="light" size="sm">
-                  На участке
-                </Button>
-              ) : null}
               {canWorkWithOrder ? (
                 <>
                   <Button

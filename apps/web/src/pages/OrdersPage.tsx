@@ -253,17 +253,6 @@ export function OrdersPage() {
       <Group justify="space-between" mb="md" wrap="wrap">
         <Group gap="sm">
           <Title order={3}>Заказы</Title>
-          <Button component={Link} to="/orders/board" variant="light" size="sm">
-            По цеху
-          </Button>
-          {canStationBoard ? (
-            <Button component={Link} to="/orders/board/station" variant="light" size="sm">
-              На участке
-            </Button>
-          ) : null}
-          <Button component={Link} to="/orders/archive" variant="light" size="sm">
-            Архив
-          </Button>
         </Group>
       </Group>
 
