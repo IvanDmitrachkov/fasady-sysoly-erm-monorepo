@@ -188,7 +188,7 @@ export function ShellLayout() {
           {user ? (
             <Group gap="sm" visibleFrom="sm">
               {canCreateOrder ? (
-                <Button component={RouterLink} to="/orders/new" size="xs" leftSection={<IconPlus size={16} />}>
+                <Button component={RouterLink} to="/orders/new" size="sm" leftSection={<IconPlus size={18} />} fw={600}>
                   Новый заказ
                 </Button>
               ) : null}
@@ -569,7 +569,7 @@ export function ShellLayout() {
               label="Новый заказ"
               to="/orders/new"
               active={newOrderNavActive}
-              icon={<IconPlus size={18} />}
+              icon={<IconPlus size={22} />}
             />
           ) : null}
           <MobileBottomAction label="Открыть меню" icon={<IconMenu2 size={18} />} onClick={openMobileMenu} />
