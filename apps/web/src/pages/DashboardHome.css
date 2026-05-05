@@ -1,0 +1,18 @@
+.dashboard-kpi-card {
+  min-height: 148px;
+}
+
+.dashboard-chart-wrap {
+  width: 100%;
+  height: 320px;
+}
+
+.dashboard-chart-wrap-pie {
+  height: 260px;
+}
+
+.dashboard-stage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
