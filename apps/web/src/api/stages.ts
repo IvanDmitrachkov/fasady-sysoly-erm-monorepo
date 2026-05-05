@@ -6,6 +6,7 @@ export type StageDto = {
   name: string;
   sortOrder: number;
   isComplete: boolean;
+  allowWorkStates: boolean;
 };
 
 export function stagesList() {
@@ -17,6 +18,7 @@ export function stageCreate(body: {
   name: string;
   sortOrder: number;
   isComplete?: boolean;
+  allowWorkStates?: boolean;
 }) {
   return apiJson<{ stage: StageDto }>("/api/stages", {
     method: "POST",
@@ -26,7 +28,7 @@ export function stageCreate(body: {
 
 export function stageUpdate(
   id: string,
-  body: Partial<{ slug: string; name: string; sortOrder: number; isComplete: boolean }>,
+  body: Partial<{ slug: string; name: string; sortOrder: number; isComplete: boolean; allowWorkStates: boolean }>,
 ) {
   return apiJson<{ stage: StageDto }>(`/api/stages/${id}`, {
     method: "PATCH",

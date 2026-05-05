@@ -27,12 +27,13 @@ const stageFormSchema = z.object({
   name: z.string().min(1),
   sortOrder: z.number().int(),
   isComplete: z.boolean(),
+  allowWorkStates: z.boolean(),
 });
 
 type StageForm = z.infer<typeof stageFormSchema>;
 
 function emptyStageForm(sortOrder: number): StageForm {
-  return { slug: "", name: "", sortOrder, isComplete: false };
+  return { slug: "", name: "", sortOrder, isComplete: false, allowWorkStates: true };
 }
 
 export function StagesPage() {
@@ -119,6 +120,7 @@ export function StagesPage() {
                 <Table.Th>Название</Table.Th>
                 <Table.Th>Slug</Table.Th>
                 <Table.Th>Финальный</Table.Th>
+                <Table.Th>Под-статусы</Table.Th>
                 <Table.Th style={{ width: 100 }} />
               </Table.Tr>
             </Table.Thead>
@@ -144,6 +146,17 @@ export function StagesPage() {
                     )}
                   </Table.Td>
                   <Table.Td>
+                    {s.allowWorkStates ? (
+                      <Badge color="blue" variant="light">
+                        включены
+                      </Badge>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        отключены
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
                     <Group gap={4} justify="flex-end">
                       <ActionIcon
                         variant="subtle"
@@ -155,6 +168,7 @@ export function StagesPage() {
                             name: s.name,
                             sortOrder: s.sortOrder,
                             isComplete: s.isComplete,
+                            allowWorkStates: s.allowWorkStates,
                           });
                         }}
                       >
@@ -192,6 +206,7 @@ export function StagesPage() {
               name: v.name,
               sortOrder: v.sortOrder,
               isComplete: v.isComplete,
+              allowWorkStates: v.allowWorkStates,
             }),
           )}
         >
@@ -216,6 +231,17 @@ export function StagesPage() {
               render={({ field }) => (
                 <Switch
                   label="Это финальный этап («готово»)"
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.currentTarget.checked)}
+                />
+              )}
+            />
+            <Controller
+              control={createForm.control}
+              name="allowWorkStates"
+              render={({ field }) => (
+                <Switch
+                  label="Использовать под-статусы на этапе"
                   checked={field.value}
                   onChange={(e) => field.onChange(e.currentTarget.checked)}
                 />
@@ -249,6 +275,7 @@ export function StagesPage() {
                 name: v.name,
                 sortOrder: v.sortOrder,
                 isComplete: v.isComplete,
+                allowWorkStates: v.allowWorkStates,
               },
             });
           })}
@@ -269,6 +296,17 @@ export function StagesPage() {
               render={({ field }) => (
                 <Switch
                   label="Финальный этап"
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.currentTarget.checked)}
+                />
+              )}
+            />
+            <Controller
+              control={editForm.control}
+              name="allowWorkStates"
+              render={({ field }) => (
+                <Switch
+                  label="Использовать под-статусы на этапе"
                   checked={field.value}
                   onChange={(e) => field.onChange(e.currentTarget.checked)}
                 />

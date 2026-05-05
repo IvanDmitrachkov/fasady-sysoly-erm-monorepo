@@ -16,7 +16,7 @@ async function main() {
     await prisma.stage.upsert({
       where: { slug: s.slug },
       create: { ...s },
-      update: { name: s.name, sortOrder: s.sortOrder, isComplete: s.isComplete },
+      update: { name: s.name, sortOrder: s.sortOrder, isComplete: s.isComplete, allowWorkStates: s.allowWorkStates },
     });
   }
 

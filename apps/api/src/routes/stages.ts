@@ -9,6 +9,7 @@ const createStageBody = z.object({
   name: z.string().min(1),
   sortOrder: z.number().int(),
   isComplete: z.boolean().optional(),
+  allowWorkStates: z.boolean().optional(),
 });
 
 const patchStageBody = z.object({
@@ -16,6 +17,7 @@ const patchStageBody = z.object({
   name: z.string().min(1).optional(),
   sortOrder: z.number().int().optional(),
   isComplete: z.boolean().optional(),
+  allowWorkStates: z.boolean().optional(),
 });
 
 export const stagesRoutes: FastifyPluginAsync = async (app) => {
@@ -44,6 +46,7 @@ export const stagesRoutes: FastifyPluginAsync = async (app) => {
           name: parsed.data.name,
           sortOrder: parsed.data.sortOrder,
           isComplete: parsed.data.isComplete ?? false,
+          allowWorkStates: parsed.data.allowWorkStates ?? true,
         },
       });
       await writeAudit(
@@ -84,6 +87,7 @@ export const stagesRoutes: FastifyPluginAsync = async (app) => {
           ...(parsed.data.name !== undefined && { name: parsed.data.name }),
           ...(parsed.data.sortOrder !== undefined && { sortOrder: parsed.data.sortOrder }),
           ...(parsed.data.isComplete !== undefined && { isComplete: parsed.data.isComplete }),
+          ...(parsed.data.allowWorkStates !== undefined && { allowWorkStates: parsed.data.allowWorkStates }),
         },
       });
       await writeAudit(app.prisma, authUserId(request), "stage.update", `Изменён этап «${stage.name}»`, "Stage", stage.id);

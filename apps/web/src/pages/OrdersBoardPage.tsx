@@ -8,7 +8,7 @@ import { meRequest } from "../api/auth";
 import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
-import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
+import { orderWorkStateBadgeColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 
@@ -217,7 +217,7 @@ export function OrdersBoardPage() {
                               <Text size="xs" c="dimmed" lineClamp={2}>
                                 {o.customer.name}
                               </Text>
-                              {canMove && workStateSelectData.length > 0 ? (
+                              {canMove && stage.allowWorkStates && workStateSelectData.length > 0 ? (
                                 <div
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => e.stopPropagation()}
@@ -234,6 +234,7 @@ export function OrdersBoardPage() {
                                     }}
                                     disabled={workStateMut.isPending}
                                     allowDeselect={false}
+                                    styles={{ input: orderWorkStateSelectStyles(o.workState.slug) }}
                                   />
                                 </div>
                               ) : (

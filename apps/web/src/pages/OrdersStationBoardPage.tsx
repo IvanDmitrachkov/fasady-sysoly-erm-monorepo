@@ -87,6 +87,8 @@ export function OrdersStationBoardPage() {
     if (!selectedStageId || !orders.data) return [];
     return orders.data.orders.filter((o) => o.currentStage.id === selectedStageId);
   }, [orders.data, selectedStageId]);
+  const selectedStage = stages.data?.stages.find((s) => s.id === selectedStageId);
+  const allowWorkStatesOnStage = selectedStage?.allowWorkStates ?? true;
 
   const byWorkState = useMemo(() => {
     const map = new Map<string, OrderDto[]>();
@@ -137,7 +139,7 @@ export function OrdersStationBoardPage() {
   });
 
   const onDragEnd = (result: DropResult) => {
-    if (!canMove) return;
+    if (!canMove || !allowWorkStatesOnStage) return;
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId) return;
@@ -165,9 +167,54 @@ export function OrdersStationBoardPage() {
     [stages.data],
   );
 
-  const selectedStageName = stages.data?.stages.find((s) => s.id === selectedStageId)?.name;
+  const selectedStageName = selectedStage?.name;
 
-  const columns =
+  const columns = !allowWorkStatesOnStage ? (
+    <Paper
+      key="single-stage-column"
+      shadow="sm"
+      p="md"
+      radius="md"
+      withBorder
+      style={{ flex: "0 0 320px", maxHeight: "70vh", display: "flex", flexDirection: "column" }}
+    >
+      <Group justify="space-between" mb="xs" wrap="nowrap">
+        <Badge variant="light" color="gray" size="lg">
+          Заказы
+        </Badge>
+        <Text size="xs" c="dimmed">
+          {ordersOnStage.length}
+        </Text>
+      </Group>
+      <Stack
+        gap="sm"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 120,
+          paddingBottom: 4,
+        }}
+      >
+        {ordersOnStage.map((o) => (
+          <Paper key={o.id} p="sm" withBorder radius="md" onClick={() => setPreviewOrder(o)}>
+            <Stack gap={4}>
+              <Text fw={600} size="sm" c="brand.6">
+                №{o.orderNumberFormatted}
+              </Text>
+              <Text size="xs" c="dimmed" lineClamp={2}>
+                {o.customer.name}
+              </Text>
+              <Badge size="xs" variant="light" color={orderWorkStateBadgeColor(o.workState.slug)}>
+                {o.workState.name}
+              </Badge>
+              {o.deadlineAt ? <Text size="xs">до {dayjs(o.deadlineAt).format("D MMM YYYY")}</Text> : null}
+              <Text size="xs">{o.totalCost != null ? money.format(o.totalCost) : "—"}</Text>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
+    </Paper>
+  ) : (
     workStates.data?.orderWorkStates.map((ws) => {
       const list = byWorkState.get(ws.id) ?? [];
       return (
@@ -250,7 +297,8 @@ export function OrdersStationBoardPage() {
           </Droppable>
         </Paper>
       );
-    }) ?? null;
+    }) ?? null
+  );
 
   if (me.isPending) {
     return <Text c="dimmed">Загрузка…</Text>;
@@ -275,9 +323,14 @@ export function OrdersStationBoardPage() {
             maxDropdownHeight={280}
             maw={420}
           />
-          {selectedStageName ? (
+          {selectedStageName && allowWorkStatesOnStage ? (
             <Text size="sm" c="dimmed">
               Заказы на этапе «{selectedStageName}»: карточки перетаскивайте между колонками под-статусов.
+            </Text>
+          ) : null}
+          {selectedStageName && !allowWorkStatesOnStage ? (
+            <Text size="sm" c="dimmed">
+              Для этапа «{selectedStageName}» под-статусы отключены.
             </Text>
           ) : null}
         </Stack>
@@ -294,12 +347,15 @@ export function OrdersStationBoardPage() {
         </Group>
       </Group>
 
-      {orders.isPending || stages.isPending || workStates.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
+      {orders.isPending || stages.isPending || (allowWorkStatesOnStage && workStates.isPending) ? (
+        <Text c="dimmed">Загрузка…</Text>
+      ) : null}
       {orders.isError ? (
         <Text c="red">{orders.error instanceof Error ? orders.error.message : "Ошибка"}</Text>
       ) : null}
 
-      {workStates.data && columns ? (
+      {(allowWorkStatesOnStage ? workStates.data && columns : columns) ? (
+        allowWorkStatesOnStage ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <ScrollArea type="scroll" offsetScrollbars>
             <Group align="flex-start" wrap="nowrap" gap="md" pb="md" style={{ minHeight: 360 }}>
@@ -307,6 +363,13 @@ export function OrdersStationBoardPage() {
             </Group>
           </ScrollArea>
         </DragDropContext>
+        ) : (
+          <ScrollArea type="scroll" offsetScrollbars>
+            <Group align="flex-start" wrap="nowrap" gap="md" pb="md" style={{ minHeight: 360 }}>
+              {columns}
+            </Group>
+          </ScrollArea>
+        )
       ) : null}
 
       <Modal

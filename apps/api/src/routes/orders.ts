@@ -512,6 +512,9 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       if (!ws) {
         return reply.code(400).send({ error: "Под-статус не найден" });
       }
+      if (!order.currentStage.allowWorkStates) {
+        return reply.code(400).send({ error: "На текущем этапе под-статусы отключены" });
+      }
 
       const updated = await app.prisma.order.update({
         where: { id },

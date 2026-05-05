@@ -7,7 +7,7 @@ import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { money } from "../lib/order-form";
-import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
+import { orderWorkStateBadgeColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import dayjs from "dayjs";
 import "./OrdersPage.css";
 
@@ -71,7 +71,7 @@ export function OrdersPage() {
     );
 
   const workStateControl = (order: OrderDto, fullWidth = false) =>
-    canMoveOrder ? (
+    canMoveOrder && order.currentStage.allowWorkStates ? (
       <Select
         data={workStateOptions}
         value={order.workState.id}
@@ -84,6 +84,7 @@ export function OrdersPage() {
         variant="filled"
         allowDeselect={false}
         disabled={workStateMut.isPending || workStateOptions.length === 0}
+        styles={{ input: orderWorkStateSelectStyles(order.workState.slug) }}
         w={fullWidth ? "100%" : 200}
       />
     ) : (

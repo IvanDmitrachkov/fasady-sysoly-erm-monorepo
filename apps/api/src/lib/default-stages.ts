@@ -6,15 +6,16 @@ export const DEFAULT_STAGES: readonly {
   name: string;
   sortOrder: number;
   isComplete: boolean;
+  allowWorkStates: boolean;
 }[] = [
-  { slug: "new", name: "Новый", sortOrder: 0, isComplete: false },
-  { slug: "cut", name: "Раскрой", sortOrder: 1, isComplete: false },
-  { slug: "prep", name: "Подготовка", sortOrder: 2, isComplete: false },
-  { slug: "coating", name: "Покраска / Плёнка", sortOrder: 3, isComplete: false },
-  { slug: "polish", name: "Полировка / Шлифовка", sortOrder: 4, isComplete: false },
-  { slug: "pack", name: "Упаковка", sortOrder: 5, isComplete: false },
-  { slug: "ready", name: "Готово", sortOrder: 6, isComplete: true },
-  { slug: "ship", name: "Отгрузка", sortOrder: 7, isComplete: true },
+  { slug: "new", name: "Новый", sortOrder: 0, isComplete: false, allowWorkStates: false },
+  { slug: "cut", name: "Раскрой", sortOrder: 1, isComplete: false, allowWorkStates: true },
+  { slug: "prep", name: "Подготовка", sortOrder: 2, isComplete: false, allowWorkStates: true },
+  { slug: "coating", name: "Покраска / Плёнка", sortOrder: 3, isComplete: false, allowWorkStates: true },
+  { slug: "polish", name: "Полировка / Шлифовка", sortOrder: 4, isComplete: false, allowWorkStates: true },
+  { slug: "pack", name: "Упаковка", sortOrder: 5, isComplete: false, allowWorkStates: true },
+  { slug: "ready", name: "Готово", sortOrder: 6, isComplete: true, allowWorkStates: false },
+  { slug: "ship", name: "Отгрузка", sortOrder: 7, isComplete: true, allowWorkStates: false },
 ];
 
 /** Если этапов нет (не гоняли seed) — создаём дефолтные, чтобы API не падал. */

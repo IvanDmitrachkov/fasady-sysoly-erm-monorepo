@@ -64,7 +64,7 @@ import {
   type CreateOrderFormValues,
 } from "../lib/order-form";
 import dayjs from "dayjs";
-import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
+import { orderWorkStateBadgeColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import "./OrderDetailPage.css";
 
 function InfoCard({
@@ -396,7 +396,7 @@ export function OrderDetailPage() {
                     Переместить
                   </Button>
                 </Group>
-                {workStates.data ? (
+                {workStates.data && o.currentStage.allowWorkStates ? (
                   <Select
                     label="На участке"
                     data={workStates.data.orderWorkStates.map((w) => ({ value: w.id, label: w.name }))}
@@ -406,6 +406,7 @@ export function OrderDetailPage() {
                     }}
                     disabled={workStateMut.isPending}
                     allowDeselect={false}
+                    styles={{ input: orderWorkStateSelectStyles(o.workState.slug) }}
                     w={280}
                     size="sm"
                   />
