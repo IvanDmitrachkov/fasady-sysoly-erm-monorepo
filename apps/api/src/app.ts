@@ -15,6 +15,7 @@ import { ordersRoutes } from "./routes/orders.js";
 import { stagesRoutes } from "./routes/stages.js";
 import { customersRoutes } from "./routes/customers.js";
 import { auditRoutes } from "./routes/audit.js";
+import { activityRoutes } from "./routes/activity.js";
 import { timeEntriesRoutes } from "./routes/time-entries.js";
 import { usersRoutes } from "./routes/users.js";
 import { cuttingRoutes } from "./routes/cutting.js";
@@ -105,6 +106,7 @@ export async function buildApp(env: Env) {
   await app.register(stagesRoutes, { prefix: "/api" });
   await app.register(customersRoutes, { prefix: "/api" });
   await app.register(auditRoutes, { prefix: "/api" });
+  await app.register(activityRoutes, { prefix: "/api" });
   await app.register(timeEntriesRoutes, { prefix: "/api" });
   await app.register(usersRoutes, { prefix: "/api" });
   await app.register(reportsRoutes, { prefix: "/api" });

@@ -15,6 +15,7 @@ import { UsersPage } from "./pages/UsersPage";
 import { AuditPage } from "./pages/AuditPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { TimeReportPage } from "./pages/TimeReportPage";
+import { ActivityPage } from "./pages/ActivityPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { HelpPage } from "./pages/HelpPage";
@@ -52,6 +53,7 @@ export const router = createBrowserRouter(
             { path: "customers", element: <CustomersPage /> },
             { path: "audit", element: <AuditPage /> },
             { path: "time-report", element: <TimeReportPage /> },
+            { path: "activity", element: <ActivityPage /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "profile", element: <ProfilePage /> },
             { path: "help", element: <HelpPage /> },

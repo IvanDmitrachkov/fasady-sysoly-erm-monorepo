@@ -36,7 +36,7 @@ import {
   IconTrash,
   IconUser,
 } from "@tabler/icons-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { coatingTypesList, handleTypesList, millingTypesList } from "../api/facade-types";
@@ -106,6 +106,7 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -263,6 +264,11 @@ export function OrderDetailPage() {
   });
 
   const o = order.data?.order;
+  const tabFromQuery = searchParams.get("tab");
+  const allowedTabs = canWorkWithOrder
+    ? ["overview", "facades", "finance", "time", "comments"]
+    : ["overview", "facades", "finance", "time"];
+  const activeTab = allowedTabs.includes(tabFromQuery ?? "") ? (tabFromQuery as string) : "overview";
 
   if (!orderId) {
     return <Text>Некорректная ссылка</Text>;
@@ -441,7 +447,17 @@ export function OrderDetailPage() {
         </Paper>
       </SimpleGrid>
 
-      <Tabs defaultValue="overview" variant="outline" radius="md">
+      <Tabs
+        value={activeTab}
+        onChange={(next) => {
+          if (!next) return;
+          const updated = new URLSearchParams(searchParams);
+          updated.set("tab", next);
+          setSearchParams(updated, { replace: true });
+        }}
+        variant="outline"
+        radius="md"
+      >
         <ScrollArea type="auto" offsetScrollbars mb="md">
           <Tabs.List className="order-detail-tabs-list">
             <Tabs.Tab value="overview" leftSection={<IconReceipt size={16} />}>

@@ -22,6 +22,7 @@ import {
 } from "@mantine/core";
 import {
   IconArchive,
+  IconBolt,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -144,6 +145,7 @@ export function ShellLayout() {
   const archiveNavActive = rel === "/orders/archive";
   const timeReportNavActive = rel === "/time-report";
   const reportsNavActive = rel === "/reports";
+  const activityNavActive = rel === "/activity";
   const customersNavActive = rel === "/customers";
   const usersNavActive = rel === "/users";
   const stagesNavActive = rel === "/stages";
@@ -318,6 +320,16 @@ export function ShellLayout() {
               ) : null}
               {canTimeReport ? (
                 <NavLink
+                  label={navbarCollapsed ? null : "Активность"}
+                  component={RouterNavLink}
+                  to="/activity"
+                  active={activityNavActive}
+                  leftSection={navIcon(<IconBolt size={16} />, "yellow")}
+                  styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
+                />
+              ) : null}
+              {canTimeReport ? (
+                <NavLink
                   label={navbarCollapsed ? null : "Трудозатраты"}
                   component={RouterNavLink}
                   to="/time-report"
@@ -461,6 +473,16 @@ export function ShellLayout() {
                   active={reportsNavActive}
                   onClick={closeMobileMenu}
                   leftSection={navIcon(<IconReportAnalytics size={16} />, "violet")}
+                />
+              ) : null}
+              {canTimeReport ? (
+                <NavLink
+                  label="Активность"
+                  component={RouterNavLink}
+                  to="/activity"
+                  active={activityNavActive}
+                  onClick={closeMobileMenu}
+                  leftSection={navIcon(<IconBolt size={16} />, "yellow")}
                 />
               ) : null}
               {canTimeReport ? (
