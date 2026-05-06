@@ -19,6 +19,7 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { HelpPage } from "./pages/HelpPage";
+import { SalesLandingPage } from "./pages/SalesLandingPage";
 import { ACCESS_TOKEN_KEY } from "./api/http";
 
 function RequireAuth() {
@@ -57,6 +58,7 @@ export const router = createBrowserRouter(
             { path: "reports", element: <ReportsPage /> },
             { path: "profile", element: <ProfilePage /> },
             { path: "help", element: <HelpPage /> },
+            { path: "about", element: <SalesLandingPage /> },
           ],
         },
       ],

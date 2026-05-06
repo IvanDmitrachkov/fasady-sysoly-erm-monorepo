@@ -31,6 +31,7 @@ import {
   IconFolders,
   IconHelpCircle,
   IconHome2,
+  IconInfoCircle,
   IconLayoutColumns,
   IconLayoutKanban,
   IconLogout,
@@ -152,6 +153,7 @@ export function ShellLayout() {
   const facadeCatalogNavActive = rel === "/facade-catalog";
   const auditNavActive = rel === "/audit";
   const helpNavActive = rel === "/help";
+  const aboutNavActive = rel === "/about";
 
   const me = useQuery({
     queryKey: ["me"],
@@ -380,6 +382,14 @@ export function ShellLayout() {
 
           <NavGroup label="Система" collapsed={navbarCollapsed}>
             <NavLink
+              label={navbarCollapsed ? null : "О сервисе"}
+              component={RouterNavLink}
+              to="/about"
+              active={aboutNavActive}
+              leftSection={navIcon(<IconInfoCircle size={16} />, "blue")}
+              styles={{ body: { display: navbarCollapsed ? "none" : undefined } }}
+            />
+            <NavLink
               label={navbarCollapsed ? null : "Инструкция"}
               component={RouterNavLink}
               to="/help"
@@ -536,6 +546,14 @@ export function ShellLayout() {
           ) : null}
 
           <NavGroup label="Система" collapsed={false}>
+            <NavLink
+              label="О сервисе"
+              component={RouterNavLink}
+              to="/about"
+              active={aboutNavActive}
+              onClick={closeMobileMenu}
+              leftSection={navIcon(<IconInfoCircle size={16} />, "blue")}
+            />
             <NavLink
               label="Инструкция"
               component={RouterNavLink}
