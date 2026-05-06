@@ -53,6 +53,7 @@ import { orderWorkStatesList } from "../api/order-work-states";
 import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
+import { OrderCommentsSection } from "../components/OrderCommentsSection";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
   buildOrderWritePayload,
@@ -455,6 +456,11 @@ export function OrderDetailPage() {
             <Tabs.Tab value="time" leftSection={<IconClockHour4 size={16} />}>
               Трудозатраты
             </Tabs.Tab>
+            {canWorkWithOrder ? (
+              <Tabs.Tab value="comments" leftSection={<IconLayoutKanban size={16} />}>
+                Комментарии
+              </Tabs.Tab>
+            ) : null}
           </Tabs.List>
         </ScrollArea>
 
@@ -568,6 +574,11 @@ export function OrderDetailPage() {
         <Tabs.Panel value="time">
           <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
         </Tabs.Panel>
+        {canWorkWithOrder ? (
+          <Tabs.Panel value="comments">
+            <OrderCommentsSection orderId={orderId!} canEdit={canWorkWithOrder} />
+          </Tabs.Panel>
+        ) : null}
       </Tabs>
 
       <Modal opened={deleteOpen} onClose={() => setDeleteOpen(false)} title="Удалить заказ">

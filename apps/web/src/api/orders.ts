@@ -69,6 +69,23 @@ export type OrderDto = {
   facades: FacadeDto[];
 };
 
+export type OrderCommentType = "NOTE" | "DEFECT" | "INCIDENT";
+
+export type OrderCommentDto = {
+  id: string;
+  type: OrderCommentType;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    patronymic: string | null;
+  };
+};
+
 export type OrdersListScope = "active" | "archive" | "all";
 
 export function ordersList(scope: OrdersListScope = "active") {
@@ -136,6 +153,20 @@ export function orderCreate(body: {
 
 export function orderGet(orderId: string) {
   return apiJson<{ order: OrderDto }>(`/api/orders/${orderId}`);
+}
+
+export function orderCommentsList(orderId: string) {
+  return apiJson<{ comments: OrderCommentDto[] }>(`/api/orders/${orderId}/comments`);
+}
+
+export function orderCommentCreate(
+  orderId: string,
+  body: { type?: OrderCommentType; text: string },
+) {
+  return apiJson<{ comment: OrderCommentDto }>(`/api/orders/${orderId}/comments`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export type OrderUpdatePayload = {

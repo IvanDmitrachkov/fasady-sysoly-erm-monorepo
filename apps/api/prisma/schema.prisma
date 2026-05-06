@@ -33,6 +33,7 @@ model User {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   auditLogs    AuditLog[]
+  orderComments OrderComment[]
   timeEntries  TimeEntry[]
   customer     Customer?   @relation(fields: [customerId], references: [id])
 }
@@ -145,7 +146,22 @@ model Order {
   currentStage        Stage       @relation("OrderCurrentStage", fields: [currentStageId], references: [id])
   workState           OrderWorkState @relation(fields: [workStateId], references: [id])
   customer            Customer    @relation(fields: [customerId], references: [id])
+  comments            OrderComment[]
   timeEntries         TimeEntry[]
+}
+
+model OrderComment {
+  id        String           @id @default(uuid())
+  orderId   String
+  userId    String
+  type      OrderCommentType @default(NOTE)
+  text      String           @db.Text
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  order     Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([orderId, createdAt])
 }
 
 model TimeEntry {
@@ -204,4 +220,10 @@ enum Role {
   ADMIN
   WORKER
   CUSTOMER
+}
+
+enum OrderCommentType {
+  NOTE
+  DEFECT
+  INCIDENT
 }

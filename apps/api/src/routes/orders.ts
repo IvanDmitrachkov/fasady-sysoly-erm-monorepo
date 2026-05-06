@@ -1,4 +1,4 @@
-import { Role, type Prisma, type PrismaClient } from "@prisma/client";
+import { OrderCommentType, Role, type Prisma, type PrismaClient } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHandlers.js";
@@ -100,6 +100,10 @@ const patchOrderBody = z.object({
 
 const moveBody = z.object({ stageId: z.string().min(1) });
 const setWorkStateBody = z.object({ workStateId: z.string().min(1) });
+const createCommentBody = z.object({
+  type: z.nativeEnum(OrderCommentType).default(OrderCommentType.NOTE),
+  text: z.string().trim().min(1, "Комментарий не может быть пустым").max(4000, "Комментарий слишком длинный"),
+});
 const listOrdersQuery = z.object({
   scope: z.enum(["active", "archive", "all"]).default("active"),
 });
@@ -197,6 +201,36 @@ function mapFacadeCreate(f: z.infer<typeof facadeItem>, index: number) {
   };
 }
 
+function serializeComment(comment: {
+  id: string;
+  type: OrderCommentType;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    patronymic: string | null;
+  };
+}) {
+  return {
+    id: comment.id,
+    type: comment.type,
+    text: comment.text,
+    createdAt: comment.createdAt.toISOString(),
+    updatedAt: comment.updatedAt.toISOString(),
+    user: {
+      id: comment.user.id,
+      email: comment.user.email,
+      firstName: comment.user.firstName,
+      lastName: comment.user.lastName,
+      patronymic: comment.user.patronymic,
+    },
+  };
+}
+
 async function validateFacadeCoatingRefs(
   prisma: PrismaClient,
   facades: z.infer<typeof facadeItem>[],
@@ -260,6 +294,85 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
     }
     return { order: serializeOrder(order) };
   });
+
+  app.get(
+    "/orders/:id/comments",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const order = await fetchOrder(app.prisma, id);
+      if (!order) {
+        return reply.code(404).send({ error: "Заказ не найден" });
+      }
+
+      const comments = await app.prisma.orderComment.findMany({
+        where: { orderId: id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              patronymic: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return { comments: comments.map((comment) => serializeComment(comment)) };
+    },
+  );
+
+  app.post(
+    "/orders/:id/comments",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = createCommentBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
+      }
+
+      const order = await fetchOrder(app.prisma, id);
+      if (!order) {
+        return reply.code(404).send({ error: "Заказ не найден" });
+      }
+
+      const uid = authUserId(request);
+      const comment = await app.prisma.orderComment.create({
+        data: {
+          orderId: id,
+          userId: uid,
+          type: parsed.data.type,
+          text: parsed.data.text,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              patronymic: true,
+            },
+          },
+        },
+      });
+
+      await writeAudit(
+        app.prisma,
+        uid,
+        "order.comment.create",
+        `Комментарий (${parsed.data.type}) к заказу №${formatOrderNumber(order.orderNumber)}`,
+        "OrderComment",
+        comment.id,
+      );
+
+      return reply.code(201).send({ comment: serializeComment(comment) });
+    },
+  );
 
   app.post(
     "/orders",
