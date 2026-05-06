@@ -91,6 +91,11 @@ export const theme = createTheme({
         radius: "xl",
       },
     },
+    Input: {
+      defaultProps: {
+        autoComplete: "off",
+      },
+    },
     TextInput: {
       defaultProps: {
         radius: "md",
