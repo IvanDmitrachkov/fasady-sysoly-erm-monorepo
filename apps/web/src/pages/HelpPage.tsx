@@ -1,12 +1,13 @@
 import { type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Badge, Card, Group, List, SimpleGrid, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { Alert, Badge, Group, List, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import {
   IconBook2,
   IconChartBar,
   IconCircleCheck,
   IconClipboardList,
   IconDatabaseCog,
+  IconMessageCircle2,
   IconLayoutKanban,
   IconReportAnalytics,
   IconRulerMeasure,
@@ -50,6 +51,7 @@ const roleHelp: Record<Role, HelpSection[]> = {
         "Откройте «Заказы», чтобы увидеть таблицу заказов с заказчиком, этапом, сроком, количеством фасадов, суммой, авансом и адресом доставки.",
         "Нажмите «Новый заказ», чтобы создать заказ: выбрать заказчика, заполнить работы, сроки, адрес, фасады, фрезеровку, покрытие, цвет, ручки, цены и аванс.",
         "Откройте номер заказа, чтобы посмотреть карточку, отредактировать данные, скачать бланк заказа, перейти к раскрою или удалить заказ.",
+        "Используйте комментарий в заказе для всех важных договорённостей: изменения, уточнения, причины задержек и договоры по срокам.",
         "Этап заказа можно менять прямо в таблице, на канбане «По цеху» или в карточке заказа.",
       ],
     },
@@ -61,6 +63,7 @@ const roleHelp: Record<Role, HelpSection[]> = {
       items: [
         "«По цеху» показывает заказы по этапам производства. Перетаскивайте карточку между колонками, чтобы изменить текущий этап.",
         "«На участке»: выберите этап сверху и работайте с заказами только на этой точке; колонки — под-статусы (очередь, в работе и т.д.). Перетаскивание меняет под-статус.",
+        "Под-статусы используйте как оперативные отметки внутри участка: «В работе» — выполняется, «Заблокирован» — есть препятствие, «Готов» — этап завершён.",
         "В карточке заказа используйте раздел трудозатрат, чтобы видеть и добавлять время работ по этапам.",
         "Страница раскроя доступна из карточки заказа и помогает подготовить производственный список деталей.",
         "Печатный XLSX-бланк нужен для передачи заказа в цех или для внутреннего согласования.",
@@ -100,6 +103,7 @@ const roleHelp: Record<Role, HelpSection[]> = {
       items: [
         "Откройте «Заказы», чтобы увидеть список работ: номер, заказчика, текущий этап, срок, тип работы, количество фасадов и адрес доставки.",
         "Нажмите на номер заказа, чтобы открыть карточку с составом фасадов, размерами, материалами, оплатой и комментариями.",
+        "Все важные уточнения фиксируйте в комментарии заказа: это снижает ошибки на передаче между участками.",
         "Создание, редактирование и удаление заказов выполняет администратор. Если данные неверные, передайте правку администратору.",
         "Заказы заказчиков, к которым у вас нет ограничений, доступны для производственной работы и контроля статуса.",
       ],
@@ -112,6 +116,7 @@ const roleHelp: Record<Role, HelpSection[]> = {
       items: [
         "«По цеху»: заказы по этапам — перетащите карточку между колонками, чтобы сменить этап.",
         "«На участке»: выберите этап в списке сверху (выбор сохраняется на этом устройстве). Колонки — под-статусы; перетаскивание карточки меняет под-статус.",
+        "Статусы внутри участка помогают договориться в команде: «В работе», «Заблокирован», «Готов».",
         "В таблице заказов этап также можно сменить через выпадающий список.",
         "Заказчики увидят новый этап в своём кабинете, поэтому обновляйте статус после фактического перехода работы.",
       ],
@@ -150,6 +155,7 @@ const roleHelp: Record<Role, HelpSection[]> = {
       items: [
         "Откройте «Заказы», чтобы увидеть свои заказы, текущие этапы, сроки, количество фасадов, суммы, аванс и адрес доставки.",
         "Нажмите на номер заказа, чтобы открыть подробную карточку.",
+        "В карточке можно читать комментарии по заказу: там фиксируют важные уточнения и изменения по ходу работы.",
         "Если вы не видите нужный заказ, обратитесь к менеджеру: профиль заказчика должен быть привязан к правильной организации.",
         "Создание и изменение заказов выполняет команда сервиса, поэтому клиентский кабинет работает в режиме просмотра.",
       ],
@@ -195,26 +201,24 @@ const roleHelp: Record<Role, HelpSection[]> = {
 
 function HelpCard({ section }: { section: HelpSection }) {
   return (
-    <Card withBorder radius="md" p="lg">
-      <Stack gap="sm">
-        <Group align="flex-start" gap="sm">
-          <ThemeIcon variant="light" color={section.color} radius="md" size={34}>
-            {section.icon}
-          </ThemeIcon>
-          <Stack gap={2}>
-            <Title order={4}>{section.title}</Title>
-            <Text size="sm" c="dimmed">
-              {section.description}
-            </Text>
-          </Stack>
-        </Group>
-        <List spacing="xs" size="sm" icon={<IconCircleCheck size={16} />}>
-          {section.items.map((item) => (
-            <List.Item key={item}>{item}</List.Item>
-          ))}
-        </List>
-      </Stack>
-    </Card>
+    <Stack gap="sm">
+      <Group align="flex-start" gap="sm">
+        <ThemeIcon variant="light" color={section.color} radius="md" size={34}>
+          {section.icon}
+        </ThemeIcon>
+        <Stack gap={2}>
+          <Title order={4}>{section.title}</Title>
+          <Text size="sm" c="dimmed">
+            {section.description}
+          </Text>
+        </Stack>
+      </Group>
+      <List spacing="xs" size="sm" icon={<IconCircleCheck size={16} />}>
+        {section.items.map((item) => (
+          <List.Item key={item}>{item}</List.Item>
+        ))}
+      </List>
+    </Stack>
   );
 }
 
@@ -232,7 +236,7 @@ export function HelpPage() {
   const sections = roleHelp[role];
 
   return (
-    <Stack gap="lg">
+    <Stack gap="lg" maw={920} mx="auto">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
           <Group gap="xs">
@@ -253,13 +257,13 @@ export function HelpPage() {
         {roleSummaries[role]}
       </Alert>
 
-      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+      <Stack gap="xl">
         {sections.map((section) => (
           <HelpCard key={section.title} section={section} />
         ))}
-      </SimpleGrid>
+      </Stack>
 
-      <Card withBorder radius="md" p="lg">
+      <Stack gap="sm">
         <Group align="flex-start" gap="sm">
           <ThemeIcon variant="light" color="gray" radius="md" size={34}>
             <IconUsers size={18} />
@@ -273,7 +277,49 @@ export function HelpPage() {
             </Text>
           </Stack>
         </Group>
-      </Card>
+      </Stack>
+
+      <Stack gap="sm">
+        <Group align="flex-start" gap="sm">
+          <ThemeIcon variant="light" color="blue" radius="md" size={34}>
+            <IconLayoutKanban size={18} />
+          </ThemeIcon>
+          <Stack gap={4}>
+            <Title order={4}>Как работать с канбаном и статусами</Title>
+            <List spacing="xs" size="sm" icon={<IconCircleCheck size={16} />}>
+              <List.Item>
+                Перемещайте карточку заказа на следующий этап только когда работа реально перешла дальше.
+              </List.Item>
+              <List.Item>Если заказ вернулся на доработку, переносите карточку назад — это нормальный сценарий.</List.Item>
+              <List.Item>
+                Внутри этапа используйте статусы: «В работе», «Заблокирован», «Готов», чтобы команда видела текущее
+                состояние без лишних звонков.
+              </List.Item>
+            </List>
+          </Stack>
+        </Group>
+      </Stack>
+
+      <Stack gap="sm">
+        <Group align="flex-start" gap="sm">
+          <ThemeIcon variant="light" color="teal" radius="md" size={34}>
+            <IconMessageCircle2 size={18} />
+          </ThemeIcon>
+          <Stack gap={4}>
+            <Title order={4}>Комментарии: что и зачем фиксировать</Title>
+            <List spacing="xs" size="sm" icon={<IconCircleCheck size={16} />}>
+              <List.Item>Пишите в комментариях важные договорённости, а не только в устной форме.</List.Item>
+              <List.Item>
+                Фиксируйте изменения состава заказа, причины задержек, договорённости по срокам и нестандартные условия.
+              </List.Item>
+              <List.Item>
+                Если информация важна для этапа или смены, она должна быть в комментарии заказа — так команда не теряет
+                контекст.
+              </List.Item>
+            </List>
+          </Stack>
+        </Group>
+      </Stack>
     </Stack>
   );
 }

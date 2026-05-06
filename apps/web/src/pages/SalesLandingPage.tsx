@@ -12,7 +12,7 @@ import {
 
 export function SalesLandingPage() {
   return (
-    <Stack gap="xl">
+    <Stack gap={44} maw={920} mx="auto">
       <Stack gap="sm">
         <Group gap="xs">
           <Badge variant="light" color="blue" size="lg">
@@ -34,7 +34,7 @@ export function SalesLandingPage() {
         картину по производству.
       </Alert>
 
-      <Stack gap="md">
+      <Stack gap="xl">
         <Card withBorder radius="md" p="lg">
           <Stack gap="sm">
             <Group gap="sm">
