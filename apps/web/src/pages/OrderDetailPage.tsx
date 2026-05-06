@@ -576,7 +576,12 @@ export function OrderDetailPage() {
         </Tabs.Panel>
         {canWorkWithOrder ? (
           <Tabs.Panel value="comments">
-            <OrderCommentsSection orderId={orderId!} canEdit={canWorkWithOrder} />
+            <OrderCommentsSection
+              orderId={orderId!}
+              canEdit={canWorkWithOrder}
+              currentUserId={me.data?.user.id}
+              isAdmin={isAdmin}
+            />
           </Tabs.Panel>
         ) : null}
       </Tabs>

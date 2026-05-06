@@ -169,6 +169,17 @@ export function orderCommentCreate(
   });
 }
 
+export function orderCommentUpdate(
+  orderId: string,
+  commentId: string,
+  body: Partial<{ type: OrderCommentType; text: string }>,
+) {
+  return apiJson<{ comment: OrderCommentDto }>(`/api/orders/${orderId}/comments/${commentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
 export type OrderUpdatePayload = {
   customerId?: string;
   deadlineAt?: string | null;

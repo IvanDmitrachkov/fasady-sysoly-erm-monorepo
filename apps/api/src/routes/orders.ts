@@ -104,9 +104,14 @@ const createCommentBody = z.object({
   type: z.nativeEnum(OrderCommentType).default(OrderCommentType.NOTE),
   text: z.string().trim().min(1, "Комментарий не может быть пустым").max(4000, "Комментарий слишком длинный"),
 });
+const patchCommentBody = z.object({
+  type: z.nativeEnum(OrderCommentType).optional(),
+  text: z.string().trim().min(1, "Комментарий не может быть пустым").max(4000, "Комментарий слишком длинный").optional(),
+});
 const listOrdersQuery = z.object({
   scope: z.enum(["active", "archive", "all"]).default("active"),
 });
+const COMMENT_EDIT_WINDOW_MS = 10 * 60 * 1000;
 
 async function fetchOrder(prisma: PrismaClient, id: string): Promise<OrderWithRelations | null> {
   return prisma.order.findFirst({
@@ -371,6 +376,81 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
       );
 
       return reply.code(201).send({ comment: serializeComment(comment) });
+    },
+  );
+
+  app.patch(
+    "/orders/:id/comments/:commentId",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const { id, commentId } = request.params as { id: string; commentId: string };
+      const parsed = patchCommentBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "Некорректные данные", details: parsed.error.flatten() });
+      }
+      if (parsed.data.type === undefined && parsed.data.text === undefined) {
+        return reply.code(400).send({ error: "Нет полей для обновления" });
+      }
+
+      const existing = await app.prisma.orderComment.findFirst({
+        where: { id: commentId, orderId: id },
+        include: {
+          order: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              patronymic: true,
+            },
+          },
+        },
+      });
+      if (!existing) {
+        return reply.code(404).send({ error: "Комментарий не найден" });
+      }
+
+      const p = authPayload(request);
+      const uid = authUserId(request);
+      if (p.role !== Role.ADMIN) {
+        if (existing.userId !== uid) {
+          return reply.code(403).send({ error: "Нельзя редактировать чужой комментарий" });
+        }
+        if (Date.now() - existing.createdAt.getTime() > COMMENT_EDIT_WINDOW_MS) {
+          return reply.code(403).send({ error: "Комментарий можно редактировать только в течение 10 минут" });
+        }
+      }
+
+      const updated = await app.prisma.orderComment.update({
+        where: { id: existing.id },
+        data: {
+          ...(parsed.data.type !== undefined ? { type: parsed.data.type } : {}),
+          ...(parsed.data.text !== undefined ? { text: parsed.data.text } : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              patronymic: true,
+            },
+          },
+        },
+      });
+
+      await writeAudit(
+        app.prisma,
+        uid,
+        "order.comment.update",
+        `Обновлён комментарий (${updated.type}) к заказу №${formatOrderNumber(existing.order.orderNumber)}`,
+        "OrderComment",
+        updated.id,
+      );
+
+      return { comment: serializeComment(updated) };
     },
   );
 
