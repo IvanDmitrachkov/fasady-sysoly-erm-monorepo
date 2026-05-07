@@ -3,6 +3,7 @@ import { apiJson } from "./http";
 export type MaterialEntryDto = {
   id: string;
   name: string;
+  kind: string | null;
   unit: string;
   quantity: number;
   comment: string | null;
@@ -28,6 +29,7 @@ export function materialEntryCreate(
   body: {
     stageId?: string | null;
     name: string;
+    kind?: string | null;
     unit: string;
     quantity: number;
     comment?: string | null;
@@ -45,6 +47,7 @@ export function materialEntryUpdate(
   body: Partial<{
     stageId: string | null;
     name: string;
+    kind: string | null;
     unit: string;
     quantity: number;
     comment: string | null;

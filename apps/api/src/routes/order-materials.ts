@@ -5,10 +5,25 @@ import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHa
 import { writeAudit } from "../lib/audit.js";
 import { formatOrderNumber } from "../lib/order-number.js";
 
+const MATERIAL_NAMES = [
+  "Круги",
+  "Полосы",
+  "Губки",
+  "Ситечко",
+  "Грунт первичный гр.",
+  "Грунт вторичный гр.",
+  "Краска гр.",
+  "Лак, гр.",
+  "Прочее",
+] as const;
+
+const UNIT_OPTIONS = ["шт", "гр.", "кг", "л", "м", "м²", "мл"] as const;
+
 const createBody = z.object({
   stageId: z.string().uuid().optional().nullable(),
-  name: z.string().trim().min(1, "Укажите материал"),
-  unit: z.string().trim().min(1, "Укажите единицу"),
+  name: z.enum(MATERIAL_NAMES),
+  kind: z.string().trim().optional().nullable(),
+  unit: z.enum(UNIT_OPTIONS),
   quantity: z.number().positive("Количество должно быть > 0"),
   comment: z.string().optional().nullable(),
   usedAt: z.string().datetime(),
@@ -17,8 +32,9 @@ const createBody = z.object({
 const patchBody = z
   .object({
     stageId: z.string().uuid().optional().nullable(),
-    name: z.string().trim().min(1).optional(),
-    unit: z.string().trim().min(1).optional(),
+    name: z.enum(MATERIAL_NAMES).optional(),
+    kind: z.string().trim().optional().nullable(),
+    unit: z.enum(UNIT_OPTIONS).optional(),
     quantity: z.number().positive().optional(),
     comment: z.string().optional().nullable(),
     usedAt: z.string().datetime().optional(),
@@ -28,6 +44,7 @@ const patchBody = z
 function serializeEntry(e: {
   id: string;
   name: string;
+  kind: string | null;
   unit: string;
   quantity: number;
   comment: string | null;
@@ -46,6 +63,7 @@ function serializeEntry(e: {
   return {
     id: e.id,
     name: e.name,
+    kind: e.kind,
     unit: e.unit,
     quantity: e.quantity,
     comment: e.comment,
@@ -98,6 +116,7 @@ export const orderMaterialsRoutes: FastifyPluginAsync = async (app) => {
           userId: uid,
           stageId: parsed.data.stageId ?? null,
           name: parsed.data.name,
+          kind: parsed.data.kind?.trim() ? parsed.data.kind.trim() : null,
           unit: parsed.data.unit,
           quantity: parsed.data.quantity,
           comment: parsed.data.comment ?? null,
@@ -145,6 +164,7 @@ export const orderMaterialsRoutes: FastifyPluginAsync = async (app) => {
         data: {
           ...(parsed.data.stageId !== undefined ? { stageId: parsed.data.stageId } : {}),
           ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+          ...(parsed.data.kind !== undefined ? { kind: parsed.data.kind?.trim() ? parsed.data.kind.trim() : null } : {}),
           ...(parsed.data.unit !== undefined ? { unit: parsed.data.unit } : {}),
           ...(parsed.data.quantity !== undefined ? { quantity: parsed.data.quantity } : {}),
           ...(parsed.data.comment !== undefined ? { comment: parsed.data.comment } : {}),

@@ -13,6 +13,7 @@ import { userDisplayName } from "../lib/user-display-name";
 const formSchema = z.object({
   stageId: z.string().optional(),
   name: z.string().trim().min(1, "Укажите материал"),
+  kind: z.string().optional(),
   unit: z.string().trim().min(1, "Укажите ед. изм."),
   quantity: z.number().positive("Количество должно быть больше 0"),
   usedAt: z.date({ message: "Укажите дату/время" }),
@@ -21,6 +22,20 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type Props = { orderId: string; canEdit: boolean; showCreateForm?: boolean };
+
+const MATERIAL_OPTIONS = [
+  "Круги",
+  "Полосы",
+  "Губки",
+  "Ситечко",
+  "Грунт первичный гр.",
+  "Грунт вторичный гр.",
+  "Краска гр.",
+  "Лак, гр.",
+  "Прочее",
+].map((x) => ({ value: x, label: x }));
+
+const UNIT_OPTIONS = ["шт", "гр.", "кг", "л", "м", "м²", "мл"].map((x) => ({ value: x, label: x }));
 
 export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm = true }: Props) {
   const qc = useQueryClient();
@@ -37,26 +52,27 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { stageId: "", name: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" },
+    defaultValues: { stageId: "", name: "", kind: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" },
   });
   const createMut = useMutation({
     mutationFn: (body: Parameters<typeof materialEntryCreate>[1]) => materialEntryCreate(orderId, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["materialEntries", orderId] });
-      form.reset({ stageId: "", name: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" });
+      form.reset({ stageId: "", name: "", kind: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" });
     },
   });
 
   const [editing, setEditing] = useState<MaterialEntryDto | null>(null);
   const editForm = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { stageId: "", name: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" },
+    defaultValues: { stageId: "", name: "", kind: "", unit: "шт", quantity: 1, usedAt: new Date(), comment: "" },
   });
   useEffect(() => {
     if (!editing) return;
     editForm.reset({
       stageId: editing.stage?.id ?? "",
       name: editing.name,
+      kind: editing.kind ?? "",
       unit: editing.unit,
       quantity: editing.quantity,
       usedAt: new Date(editing.usedAt),
@@ -68,6 +84,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
       materialEntryUpdate(body.id, {
         stageId: body.values.stageId?.trim() ? body.values.stageId : null,
         name: body.values.name.trim(),
+        kind: body.values.kind?.trim() ? body.values.kind : null,
         unit: body.values.unit.trim(),
         quantity: body.values.quantity,
         usedAt: body.values.usedAt.toISOString(),
@@ -102,6 +119,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
               <Table.Th>Дата</Table.Th>
               <Table.Th>Этап</Table.Th>
               <Table.Th>Материал</Table.Th>
+              <Table.Th>Вид</Table.Th>
               <Table.Th>Кол-во</Table.Th>
               <Table.Th>Кто</Table.Th>
               <Table.Th>Комментарий</Table.Th>
@@ -111,7 +129,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
           <Table.Tbody>
             {materials.data.entries.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={canEdit ? 7 : 6}>
+                <Table.Td colSpan={canEdit ? 8 : 7}>
                   <Text size="sm" c="dimmed">
                     Записей пока нет
                   </Text>
@@ -123,6 +141,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
                   <Table.Td>{dayjs(m.usedAt).format("DD.MM.YYYY HH:mm")}</Table.Td>
                   <Table.Td>{m.stage?.name ?? "—"}</Table.Td>
                   <Table.Td>{m.name}</Table.Td>
+                  <Table.Td>{m.kind?.trim() ? m.kind : "—"}</Table.Td>
                   <Table.Td>
                     {m.quantity} {m.unit}
                   </Table.Td>
@@ -154,6 +173,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
               createMut.mutate({
                 stageId: v.stageId?.trim() ? v.stageId : null,
                 name: v.name.trim(),
+                kind: v.kind?.trim() ? v.kind : null,
                 unit: v.unit.trim(),
                 quantity: v.quantity,
                 usedAt: v.usedAt.toISOString(),
@@ -175,9 +195,35 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
                   />
                 )}
               />
-              <TextInput label="Материал" {...form.register("name")} />
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Select
+                    label="Материал"
+                    data={MATERIAL_OPTIONS}
+                    value={field.value || null}
+                    onChange={(val) => field.onChange(val ?? "")}
+                    error={fieldState.error?.message}
+                    searchable
+                  />
+                )}
+              />
+              <TextInput label="Вид" placeholder="Свободный текст" {...form.register("kind")} />
               <Group grow>
-                <TextInput label="Ед. изм." {...form.register("unit")} />
+                <Controller
+                  name="unit"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Select
+                      label="Ед. изм."
+                      data={UNIT_OPTIONS}
+                      value={field.value || null}
+                      onChange={(val) => field.onChange(val ?? "")}
+                      error={fieldState.error?.message}
+                    />
+                  )}
+                />
                 <Controller
                   name="quantity"
                   control={form.control}
@@ -243,9 +289,35 @@ export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm =
                 />
               )}
             />
-            <TextInput label="Материал" {...editForm.register("name")} />
+            <Controller
+              name="name"
+              control={editForm.control}
+              render={({ field, fieldState }) => (
+                <Select
+                  label="Материал"
+                  data={MATERIAL_OPTIONS}
+                  value={field.value || null}
+                  onChange={(val) => field.onChange(val ?? "")}
+                  error={fieldState.error?.message}
+                  searchable
+                />
+              )}
+            />
+            <TextInput label="Вид" placeholder="Свободный текст" {...editForm.register("kind")} />
             <Group grow>
-              <TextInput label="Ед. изм." {...editForm.register("unit")} />
+              <Controller
+                name="unit"
+                control={editForm.control}
+                render={({ field, fieldState }) => (
+                  <Select
+                    label="Ед. изм."
+                    data={UNIT_OPTIONS}
+                    value={field.value || null}
+                    onChange={(val) => field.onChange(val ?? "")}
+                    error={fieldState.error?.message}
+                  />
+                )}
+              />
               <Controller
                 name="quantity"
                 control={editForm.control}

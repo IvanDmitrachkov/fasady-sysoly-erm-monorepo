@@ -394,6 +394,9 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
         include: timeEntryReportInclude,
         orderBy: [{ startedAt: "asc" }, { workedAt: "asc" }],
       });
+      const stages = await app.prisma.stage.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
 
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.readFile(resolveNaryadTemplatePath());
@@ -423,22 +426,20 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
         ws.getCell(`I${r}`).value = f.color ?? "";
       }
 
-      const stageRows = new Map<string, number>([
-        ["раскрой", 36],
-        ["ремонт", 37],
-        ["подготовка", 38],
-        ["поклейка", 39],
-        ["упаковка", 40],
-        ["прочее", 41],
-      ]);
-      for (const r of stageRows.values()) {
-        ws.getCell(`C${r}`).value = "";
-        ws.getCell(`F${r}`).value = "";
-        ws.getCell(`H${r}`).value = "";
+      const stageRows = [36, 37, 38, 39, 40, 41];
+      const visibleStages = stages.slice(0, stageRows.length);
+      const stageRowById = new Map<string, number>();
+      for (let i = 0; i < stageRows.length; i++) {
+        const row = stageRows[i]!;
+        const stage = visibleStages[i];
+        ws.getCell(`A${row}`).value = stage?.name ?? "";
+        ws.getCell(`C${row}`).value = "";
+        ws.getCell(`F${row}`).value = "";
+        ws.getCell(`H${row}`).value = "";
+        if (stage) stageRowById.set(stage.id, row);
       }
       for (const e of entries) {
-        const key = e.stage.name.trim().toLowerCase();
-        const row = [...stageRows.entries()].find(([k]) => key.includes(k))?.[1] ?? stageRows.get("прочее");
+        const row = stageRowById.get(e.stageId) ?? stageRows[stageRows.length - 1]!;
         if (!row) continue;
         const startedAt = e.startedAt ?? e.workedAt;
         const endedAt = e.endedAt;
@@ -470,7 +471,7 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
         const found = [...materialRows.entries()].find(([k]) => key.includes(k));
         if (found) {
           const row = found[1];
-          ws.getCell(`D${row}`).value = m.unit;
+          ws.getCell(`D${row}`).value = m.kind ?? "";
           const prev = Number(ws.getCell(`H${row}`).value ?? 0) || 0;
           ws.getCell(`H${row}`).value = prev + m.quantity;
         } else {

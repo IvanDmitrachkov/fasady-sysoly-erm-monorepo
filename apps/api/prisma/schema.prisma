@@ -195,6 +195,7 @@ model OrderMaterialEntry {
   userId    String
   stageId   String?
   name      String
+  kind      String?
   unit      String
   quantity  Float
   comment   String?
