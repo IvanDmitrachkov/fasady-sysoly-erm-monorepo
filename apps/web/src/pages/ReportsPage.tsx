@@ -42,7 +42,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { salesReport, type SalesReportHandleFilter } from "../api/reports";
+import { materialsReport, salesReport, type SalesReportHandleFilter } from "../api/reports";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { money } from "../lib/order-form";
@@ -62,6 +62,8 @@ type OrderSortKey = "orderNumber" | "completedAt" | "customer" | "facadeCount" |
 
 type FacadeSortState = { key: FacadeSortKey; dir: SortDirection };
 type OrderSortState = { key: OrderSortKey; dir: SortDirection };
+type MaterialSortKey = "usedAt" | "orderNumber" | "customer" | "name" | "quantity" | "unit" | "stage" | "user";
+type MaterialSortState = { key: MaterialSortKey; dir: SortDirection };
 
 function formatDate(value: string | null): string {
   return value ? dayjs(value).format("DD.MM.YYYY") : "—";
@@ -168,11 +170,16 @@ export function ReportsPage() {
   const [color, setColor] = useState<string | null>(null);
   const [handle, setHandle] = useState<SalesReportHandleFilter | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [materialName, setMaterialName] = useState<string | null>(null);
+  const [materialUnit, setMaterialUnit] = useState<string | null>(null);
+  const [materialStageId, setMaterialStageId] = useState<string | null>(null);
+  const [materialUserId, setMaterialUserId] = useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [tableMode, setTableMode] = useState<TableMode>("facades");
   const [search, setSearch] = useState("");
   const [facadeSort, setFacadeSort] = useState<FacadeSortState>({ key: "completedAt", dir: "desc" });
   const [orderSort, setOrderSort] = useState<OrderSortState>({ key: "completedAt", dir: "desc" });
+  const [materialSort, setMaterialSort] = useState<MaterialSortState>({ key: "usedAt", dir: "desc" });
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const isAdmin = me.data?.user.role === "ADMIN";
@@ -221,6 +228,45 @@ export function ReportsPage() {
     enabled: isAdmin && reportType === "sales" && !!prevFromIso && !!prevToIso,
   });
 
+  const materialReport = useQuery({
+    queryKey: ["materialsReport", fromIso, toIso, customerId, materialName, materialUnit, materialStageId, materialUserId],
+    queryFn: () =>
+      materialsReport({
+        from: fromIso,
+        to: toIso,
+        ...(customerId ? { customerId } : {}),
+        ...(materialName ? { name: materialName } : {}),
+        ...(materialUnit ? { unit: materialUnit } : {}),
+        ...(materialStageId ? { stageId: materialStageId } : {}),
+        ...(materialUserId ? { userId: materialUserId } : {}),
+      }),
+    enabled: isAdmin && reportType === "materials" && !!fromIso && !!toIso,
+  });
+
+  const previousMaterialReport = useQuery({
+    queryKey: [
+      "materialsReportPrevious",
+      prevFromIso,
+      prevToIso,
+      customerId,
+      materialName,
+      materialUnit,
+      materialStageId,
+      materialUserId,
+    ],
+    queryFn: () =>
+      materialsReport({
+        from: prevFromIso,
+        to: prevToIso,
+        ...(customerId ? { customerId } : {}),
+        ...(materialName ? { name: materialName } : {}),
+        ...(materialUnit ? { unit: materialUnit } : {}),
+        ...(materialStageId ? { stageId: materialStageId } : {}),
+        ...(materialUserId ? { userId: materialUserId } : {}),
+      }),
+    enabled: isAdmin && reportType === "materials" && !!prevFromIso && !!prevToIso,
+  });
+
   const coatingOptions = (report.data?.filters.coatings ?? []).map((c) => ({
     value: c.id,
     label: c.name,
@@ -229,12 +275,24 @@ export function ReportsPage() {
   const colorOptions = (report.data?.filters.colors ?? []).map((c) => ({ value: c, label: c }));
   const customerOptions = (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name }));
   const customerSelectOptions = [{ value: "__all__", label: "Все заказчики" }, ...customerOptions];
+  const materialNameOptions = (materialReport.data?.filters.names ?? []).map((x) => ({ value: x, label: x }));
+  const materialUnitOptions = (materialReport.data?.filters.units ?? []).map((x) => ({ value: x, label: x }));
+  const materialStageOptions = (materialReport.data?.filters.stages ?? []).map((x) => ({ value: x.id, label: x.name }));
+  const materialUserOptions = (materialReport.data?.filters.users ?? []).map((x) => ({ value: x.id, label: x.name }));
   const activeFilters = [
     customerId ? { key: "customer", label: `Заказчик: ${customerOptions.find((c) => c.value === customerId)?.label ?? "Выбран"}` } : null,
     coatingTypeId ? { key: "coating", label: `Покрытие: ${coatingOptions.find((c) => c.value === coatingTypeId)?.label ?? "Выбрано"}` } : null,
     millingLabel ? { key: "milling", label: `Фрезеровка: ${millingLabel}` } : null,
     color ? { key: "color", label: `Цвет: ${color}` } : null,
     handle ? { key: "handle", label: `Ручка: ${handle === "with" ? "С ручкой" : "Без ручки"}` } : null,
+    materialName ? { key: "materialName", label: `Материал: ${materialName}` } : null,
+    materialUnit ? { key: "materialUnit", label: `Ед.: ${materialUnit}` } : null,
+    materialStageId
+      ? { key: "materialStageId", label: `Этап: ${materialStageOptions.find((x) => x.value === materialStageId)?.label ?? "Выбран"}` }
+      : null,
+    materialUserId
+      ? { key: "materialUserId", label: `Сотрудник: ${materialUserOptions.find((x) => x.value === materialUserId)?.label ?? "Выбран"}` }
+      : null,
   ].filter(Boolean) as { key: string; label: string }[];
 
   const dailyRevenue = useMemo(() => {
@@ -259,6 +317,14 @@ export function ReportsPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
   }, [report.data]);
+
+  const materialChartData = useMemo(() => {
+    return (materialReport.data?.byName ?? []).slice(0, 8).map((item, idx) => ({
+      name: item.name,
+      quantity: item.quantity,
+      color: CHART_COLORS[idx % CHART_COLORS.length],
+    }));
+  }, [materialReport.data]);
 
   const filteredFacades = useMemo(() => {
     const list = [...(report.data?.facades ?? [])].filter((row) => {
@@ -316,6 +382,45 @@ export function ReportsPage() {
     return list;
   }, [report.data, search, orderSort]);
 
+  const filteredMaterialEntries = useMemo(() => {
+    const list = [...(materialReport.data?.entries ?? [])].filter((row) => {
+      if (!search.trim()) return true;
+      const needle = search.toLowerCase().trim();
+      const userName = [row.user.lastName, row.user.firstName, row.user.patronymic].filter(Boolean).join(" ").toLowerCase();
+      return (
+        row.order.orderNumberFormatted.toLowerCase().includes(needle) ||
+        row.order.customer.name.toLowerCase().includes(needle) ||
+        row.name.toLowerCase().includes(needle) ||
+        (row.kind ?? "").toLowerCase().includes(needle) ||
+        (row.stage?.name ?? "").toLowerCase().includes(needle) ||
+        userName.includes(needle) ||
+        row.user.email.toLowerCase().includes(needle)
+      );
+    });
+    list.sort((a, b) => {
+      const userA = [a.user.lastName, a.user.firstName, a.user.patronymic].filter(Boolean).join(" ") || a.user.email;
+      const userB = [b.user.lastName, b.user.firstName, b.user.patronymic].filter(Boolean).join(" ") || b.user.email;
+      const cmp =
+        materialSort.key === "usedAt"
+          ? compareNullableDate(a.usedAt, b.usedAt)
+          : materialSort.key === "orderNumber"
+            ? compareValues(a.order.orderNumber, b.order.orderNumber)
+            : materialSort.key === "customer"
+              ? compareValues(a.order.customer.name, b.order.customer.name)
+              : materialSort.key === "name"
+                ? compareValues(a.name, b.name)
+                : materialSort.key === "quantity"
+                  ? compareValues(a.quantity, b.quantity)
+                  : materialSort.key === "unit"
+                    ? compareValues(a.unit, b.unit)
+                    : materialSort.key === "stage"
+                      ? compareValues(a.stage?.name ?? "", b.stage?.name ?? "")
+                      : compareValues(userA, userB);
+      return materialSort.dir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [materialReport.data, materialSort, search]);
+
   const setPresetPeriod = (preset: "today" | "week" | "month" | "quarter" | "custom") => {
     setPeriodPreset(preset);
     if (preset === "custom") return;
@@ -345,6 +450,10 @@ export function ReportsPage() {
     if (key === "milling") setMillingLabel(null);
     if (key === "color") setColor(null);
     if (key === "handle") setHandle(null);
+    if (key === "materialName") setMaterialName(null);
+    if (key === "materialUnit") setMaterialUnit(null);
+    if (key === "materialStageId") setMaterialStageId(null);
+    if (key === "materialUserId") setMaterialUserId(null);
   };
 
   const resetFilters = () => {
@@ -354,6 +463,10 @@ export function ReportsPage() {
     setColor(null);
     setHandle(null);
     setCustomerId(null);
+    setMaterialName(null);
+    setMaterialUnit(null);
+    setMaterialStageId(null);
+    setMaterialUserId(null);
     setSearch("");
   };
 
@@ -363,6 +476,10 @@ export function ReportsPage() {
 
   const applyOrderSort = (key: OrderSortKey) => {
     setOrderSort((current) => (current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  };
+
+  const applyMaterialSort = (key: MaterialSortKey) => {
+    setMaterialSort((current) => (current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   };
 
   if (me.isSuccess && !isAdmin) {
@@ -380,7 +497,10 @@ export function ReportsPage() {
         </div>
         <Select
           label="Тип отчёта"
-          data={[{ value: "sales", label: "Реализация и сумма заказов" }]}
+          data={[
+            { value: "sales", label: "Реализация и сумма заказов" },
+            { value: "materials", label: "Расход материалов" },
+          ]}
           value={reportType}
           onChange={setReportType}
           clearable={false}
@@ -451,50 +571,95 @@ export function ReportsPage() {
 
           <Collapse in={showAdvancedFilters}>
             <Stack gap="md" mt="xs">
-              <Group grow align="flex-start" className="reports-filter-row">
-                <Select
-                  label="Покрытие"
-                  placeholder="Все"
-                  data={coatingOptions}
-                  value={coatingTypeId}
-                  onChange={setCoatingTypeId}
-                  clearable
-                  searchable
-                  w="100%"
-                />
-                <Select
-                  label="Фрезеровка"
-                  placeholder="Все"
-                  data={millingOptions}
-                  value={millingLabel}
-                  onChange={setMillingLabel}
-                  clearable
-                  searchable
-                  w="100%"
-                />
-                <Select
-                  label="Цвет"
-                  placeholder="Все"
-                  data={colorOptions}
-                  value={color}
-                  onChange={setColor}
-                  clearable
-                  searchable
-                  w="100%"
-                />
-                <Select
-                  label="Ручка"
-                  placeholder="Все"
-                  data={[
-                    { value: "with", label: "С ручкой" },
-                    { value: "without", label: "Без ручки" },
-                  ]}
-                  value={handle}
-                  onChange={(value) => setHandle(value as SalesReportHandleFilter | null)}
-                  clearable
-                  w="100%"
-                />
-              </Group>
+              {reportType === "sales" ? (
+                <Group grow align="flex-start" className="reports-filter-row">
+                  <Select
+                    label="Покрытие"
+                    placeholder="Все"
+                    data={coatingOptions}
+                    value={coatingTypeId}
+                    onChange={setCoatingTypeId}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Фрезеровка"
+                    placeholder="Все"
+                    data={millingOptions}
+                    value={millingLabel}
+                    onChange={setMillingLabel}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Цвет"
+                    placeholder="Все"
+                    data={colorOptions}
+                    value={color}
+                    onChange={setColor}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Ручка"
+                    placeholder="Все"
+                    data={[
+                      { value: "with", label: "С ручкой" },
+                      { value: "without", label: "Без ручки" },
+                    ]}
+                    value={handle}
+                    onChange={(value) => setHandle(value as SalesReportHandleFilter | null)}
+                    clearable
+                    w="100%"
+                  />
+                </Group>
+              ) : (
+                <Group grow align="flex-start" className="reports-filter-row">
+                  <Select
+                    label="Материал"
+                    placeholder="Все"
+                    data={materialNameOptions}
+                    value={materialName}
+                    onChange={setMaterialName}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Ед. измерения"
+                    placeholder="Все"
+                    data={materialUnitOptions}
+                    value={materialUnit}
+                    onChange={setMaterialUnit}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Этап"
+                    placeholder="Все"
+                    data={materialStageOptions}
+                    value={materialStageId}
+                    onChange={setMaterialStageId}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Сотрудник"
+                    placeholder="Все"
+                    data={materialUserOptions}
+                    value={materialUserId}
+                    onChange={setMaterialUserId}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                </Group>
+              )}
             </Stack>
           </Collapse>
 
@@ -522,10 +687,18 @@ export function ReportsPage() {
         </Stack>
       </Paper>
 
-      {report.isPending || previousReport.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
-      {report.isError ? <Text c="red">{report.error instanceof Error ? report.error.message : "Ошибка"}</Text> : null}
+      {(reportType === "sales" && (report.isPending || previousReport.isPending)) ||
+      (reportType === "materials" && (materialReport.isPending || previousMaterialReport.isPending)) ? (
+        <Text c="dimmed">Загрузка…</Text>
+      ) : null}
+      {reportType === "sales" && report.isError ? (
+        <Text c="red">{report.error instanceof Error ? report.error.message : "Ошибка"}</Text>
+      ) : null}
+      {reportType === "materials" && materialReport.isError ? (
+        <Text c="red">{materialReport.error instanceof Error ? materialReport.error.message : "Ошибка"}</Text>
+      ) : null}
 
-      {report.data ? (
+      {reportType === "sales" && report.data ? (
         <>
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
             <KpiCard
@@ -804,6 +977,178 @@ export function ReportsPage() {
                   </Table.Tbody>
                 </Table>
               )}
+            </ScrollArea>
+          </Paper>
+        </>
+      ) : null}
+
+      {reportType === "materials" && materialReport.data ? (
+        <>
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+            <KpiCard
+              title="Записей расхода"
+              value={String(materialReport.data.totals.entriesCount)}
+              delta={kpiDelta(materialReport.data.totals.entriesCount, previousMaterialReport.data?.totals.entriesCount ?? 0)}
+            />
+            <KpiCard
+              title="Общий расход"
+              value={area.format(materialReport.data.totals.totalQuantity)}
+              delta={kpiDelta(materialReport.data.totals.totalQuantity, previousMaterialReport.data?.totals.totalQuantity ?? 0)}
+            />
+            <KpiCard
+              title="Заказов с расходом"
+              value={String(materialReport.data.totals.ordersCount)}
+              delta={kpiDelta(materialReport.data.totals.ordersCount, previousMaterialReport.data?.totals.ordersCount ?? 0)}
+            />
+            <KpiCard
+              title="Разных материалов"
+              value={String(materialReport.data.totals.materialNamesCount)}
+              delta={kpiDelta(
+                materialReport.data.totals.materialNamesCount,
+                previousMaterialReport.data?.totals.materialNamesCount ?? 0,
+              )}
+            />
+          </SimpleGrid>
+
+          <Paper withBorder p="md" radius="md">
+            <Title order={5}>Топ материалов по расходу</Title>
+            <Text size="sm" c="dimmed" mb="sm">
+              Быстрый срез по наиболее расходуемым позициям
+            </Text>
+            <div className="reports-chart-wrap">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={materialChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <ChartTooltip formatter={(value) => [area.format(Number(value)), "Количество"]} />
+                  <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
+                    {materialChartData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Paper>
+
+          <Paper withBorder p="md" radius="md">
+            <Group justify="space-between" align="flex-end" mb="sm" wrap="wrap">
+              <Stack gap={2}>
+                <Title order={5}>Детализация по списаниям</Title>
+                <Text size="sm" c="dimmed">
+                  Поиск по заказу, заказчику, материалу, этапу и сотруднику
+                </Text>
+              </Stack>
+              <TextInput
+                placeholder="Поиск..."
+                value={search}
+                onChange={(e) => setSearch(e.currentTarget.value)}
+                leftSection={<IconSearch size={16} />}
+                w={280}
+              />
+            </Group>
+
+            <ScrollArea type="auto" offsetScrollbars className="reports-table-scroll">
+              <Table striped highlightOnHover withTableBorder miw={1200} stickyHeader>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>
+                      <SortHeader
+                        title="Дата"
+                        active={materialSort.key === "usedAt"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("usedAt")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Заказ"
+                        active={materialSort.key === "orderNumber"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("orderNumber")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Заказчик"
+                        active={materialSort.key === "customer"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("customer")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Материал"
+                        active={materialSort.key === "name"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("name")}
+                      />
+                    </Table.Th>
+                    <Table.Th>Вид</Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Кол-во"
+                        active={materialSort.key === "quantity"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("quantity")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Ед."
+                        active={materialSort.key === "unit"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("unit")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Этап"
+                        active={materialSort.key === "stage"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("stage")}
+                      />
+                    </Table.Th>
+                    <Table.Th>
+                      <SortHeader
+                        title="Сотрудник"
+                        active={materialSort.key === "user"}
+                        dir={materialSort.dir}
+                        onClick={() => applyMaterialSort("user")}
+                      />
+                    </Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {filteredMaterialEntries.length === 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={9}>
+                        <Text size="sm" c="dimmed">
+                          Нет записей по материалам для текущих условий
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    filteredMaterialEntries.map((row) => {
+                      const userName = [row.user.lastName, row.user.firstName, row.user.patronymic].filter(Boolean).join(" ").trim();
+                      return (
+                        <Table.Tr key={row.id}>
+                          <Table.Td>{formatDate(row.usedAt)}</Table.Td>
+                          <Table.Td>№{row.order.orderNumberFormatted}</Table.Td>
+                          <Table.Td>{row.order.customer.name}</Table.Td>
+                          <Table.Td>{row.name}</Table.Td>
+                          <Table.Td>{row.kind || "—"}</Table.Td>
+                          <Table.Td>{area.format(row.quantity)}</Table.Td>
+                          <Table.Td>{row.unit}</Table.Td>
+                          <Table.Td>{row.stage?.name ?? "—"}</Table.Td>
+                          <Table.Td>{userName || row.user.email}</Table.Td>
+                        </Table.Tr>
+                      );
+                    })
+                  )}
+                </Table.Tbody>
+              </Table>
             </ScrollArea>
           </Paper>
         </>

@@ -19,6 +19,16 @@ const dashboardReportQuery = z.object({
   to: z.string().datetime(),
 });
 
+const materialsReportQuery = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+  customerId: z.string().uuid().optional(),
+  stageId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  name: z.string().optional(),
+  unit: z.string().optional(),
+});
+
 function facadeAreaM2(f: { widthMm: number; heightMm: number; quantity?: number | null }): number {
   const quantity = f.quantity && f.quantity > 0 ? f.quantity : 1;
   return ((f.widthMm * f.heightMm) / 1_000_000) * quantity;
@@ -211,6 +221,142 @@ export const reportsRoutes: FastifyPluginAsync = async (app) => {
         },
         daily: [...dailyMap.values()],
         stageBreakdown: [...stageMap.values()].sort((a, b) => b.minutes - a.minutes),
+      };
+    },
+  );
+
+  app.get(
+    "/reports/materials",
+    { preHandler: [requireRoles(Role.ADMIN)] },
+    async (request, reply) => {
+      const q = materialsReportQuery.safeParse(request.query);
+      if (!q.success) {
+        return reply.code(400).send({ error: "Некорректные параметры", details: q.error.flatten() });
+      }
+
+      const from = new Date(q.data.from);
+      const to = new Date(q.data.to);
+      if (from > to) {
+        return reply.code(400).send({ error: "Начало периода позже конца" });
+      }
+
+      const baseWhere: Prisma.OrderMaterialEntryWhereInput = {
+        usedAt: { gte: from, lte: to },
+        order: {
+          is: {
+            deletedAt: null,
+            ...(q.data.customerId ? { customerId: q.data.customerId } : {}),
+          },
+        },
+      };
+
+      const where: Prisma.OrderMaterialEntryWhereInput = {
+        ...baseWhere,
+        ...(q.data.stageId ? { stageId: q.data.stageId } : {}),
+        ...(q.data.userId ? { userId: q.data.userId } : {}),
+        ...(q.data.name?.trim() ? { name: q.data.name.trim() } : {}),
+        ...(q.data.unit?.trim() ? { unit: q.data.unit.trim() } : {}),
+      };
+
+      const [entries, filterEntries] = await Promise.all([
+        app.prisma.orderMaterialEntry.findMany({
+          where,
+          include: {
+            order: { include: { customer: true } },
+            user: true,
+            stage: true,
+          },
+          orderBy: [{ usedAt: "desc" }, { createdAt: "desc" }],
+        }),
+        app.prisma.orderMaterialEntry.findMany({
+          where: baseWhere,
+          select: {
+            name: true,
+            unit: true,
+            user: { select: { id: true, firstName: true, lastName: true, patronymic: true, email: true } },
+            stage: { select: { id: true, name: true } },
+          },
+        }),
+      ]);
+
+      const byName = new Map<string, { name: string; quantity: number }>();
+      const byStage = new Map<string, { stageId: string; stageName: string; quantity: number }>();
+      const uniqueOrders = new Set<string>();
+      const uniqueNames = new Set<string>();
+
+      for (const e of entries) {
+        uniqueOrders.add(e.orderId);
+        uniqueNames.add(e.name);
+
+        const namePrev = byName.get(e.name);
+        if (namePrev) {
+          namePrev.quantity += e.quantity;
+        } else {
+          byName.set(e.name, { name: e.name, quantity: e.quantity });
+        }
+
+        if (e.stage) {
+          const stagePrev = byStage.get(e.stage.id);
+          if (stagePrev) {
+            stagePrev.quantity += e.quantity;
+          } else {
+            byStage.set(e.stage.id, { stageId: e.stage.id, stageName: e.stage.name, quantity: e.quantity });
+          }
+        }
+      }
+
+      const nameSet = new Set<string>();
+      const unitSet = new Set<string>();
+      const stageMap = new Map<string, { id: string; name: string }>();
+      const userMap = new Map<string, { id: string; name: string }>();
+
+      for (const e of filterEntries) {
+        if (e.name.trim()) nameSet.add(e.name);
+        if (e.unit.trim()) unitSet.add(e.unit);
+        if (e.stage) stageMap.set(e.stage.id, { id: e.stage.id, name: e.stage.name });
+
+        const fullName = [e.user.lastName, e.user.firstName, e.user.patronymic].filter(Boolean).join(" ").trim();
+        userMap.set(e.user.id, { id: e.user.id, name: fullName || e.user.email });
+      }
+
+      return {
+        totals: {
+          entriesCount: entries.length,
+          totalQuantity: entries.reduce((sum, e) => sum + e.quantity, 0),
+          ordersCount: uniqueOrders.size,
+          materialNamesCount: uniqueNames.size,
+        },
+        filters: {
+          names: [...nameSet].sort((a, b) => a.localeCompare(b, "ru")),
+          units: [...unitSet].sort((a, b) => a.localeCompare(b, "ru")),
+          stages: [...stageMap.values()].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+          users: [...userMap.values()].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+        },
+        byName: [...byName.values()].sort((a, b) => b.quantity - a.quantity),
+        byStage: [...byStage.values()].sort((a, b) => b.quantity - a.quantity),
+        entries: entries.map((e) => ({
+          id: e.id,
+          usedAt: e.usedAt.toISOString(),
+          name: e.name,
+          kind: e.kind,
+          unit: e.unit,
+          quantity: e.quantity,
+          comment: e.comment,
+          order: {
+            id: e.order.id,
+            orderNumber: e.order.orderNumber,
+            orderNumberFormatted: formatOrderNumber(e.order.orderNumber),
+            customer: { id: e.order.customer.id, name: e.order.customer.name },
+          },
+          user: {
+            id: e.user.id,
+            firstName: e.user.firstName,
+            lastName: e.user.lastName,
+            patronymic: e.user.patronymic,
+            email: e.user.email,
+          },
+          stage: e.stage ? { id: e.stage.id, name: e.stage.name } : null,
+        })),
       };
     },
   );
