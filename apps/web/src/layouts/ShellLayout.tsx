@@ -169,6 +169,8 @@ export function ShellLayout() {
 
   const user = me.data?.user;
   const isAdmin = user?.role === "ADMIN";
+  const isCustomer = user?.role === "CUSTOMER";
+  const isWorker = user?.role === "WORKER";
   const canCreateOrder = user?.role === "ADMIN";
   const canStationBoard = user?.role === "ADMIN" || user?.role === "WORKER";
   const canTimeReport = user?.role === "ADMIN" || user?.role === "WORKER";
@@ -464,6 +466,44 @@ export function ShellLayout() {
               leftSection={navIcon(<IconHome2 size={16} />, "gray")}
             />
             <NavLink
+              label="Заказы"
+              component={RouterLink}
+              to="/orders"
+              active={ordersNavActive}
+              onClick={closeMobileMenu}
+              leftSection={navIcon(<IconShoppingCart size={16} />, "blue")}
+            />
+            {isAdmin || isCustomer ? (
+              <NavLink
+                label="По цеху"
+                component={RouterLink}
+                to="/orders/board"
+                active={boardShopFloorActive}
+                onClick={closeMobileMenu}
+                leftSection={navIcon(<IconLayoutKanban size={16} />, "cyan")}
+              />
+            ) : null}
+            {canStationBoard ? (
+              <NavLink
+                label="На участке"
+                component={RouterLink}
+                to="/orders/board/station"
+                active={boardStationActive}
+                onClick={closeMobileMenu}
+                leftSection={navIcon(<IconLayoutColumns size={16} />, "cyan")}
+              />
+            ) : null}
+            {canCreateOrder ? (
+              <NavLink
+                label="Новый заказ"
+                component={RouterLink}
+                to="/orders/new"
+                active={newOrderNavActive}
+                onClick={closeMobileMenu}
+                leftSection={navIcon(<IconPlus size={16} />, "blue")}
+              />
+            ) : null}
+            <NavLink
               label="Архив"
               component={RouterLink}
               to="/orders/archive"
@@ -590,29 +630,23 @@ export function ShellLayout() {
             active={ordersNavActive}
             icon={<IconShoppingCart size={18} />}
           />
-          <MobileBottomAction
-            label="По цеху"
-            to="/orders/board"
-            active={boardShopFloorActive}
-            icon={<IconLayoutKanban size={18} />}
-          />
           {canStationBoard ? (
             <MobileBottomAction
-              label="На участке"
-              to="/orders/board/station"
-              active={boardStationActive}
-              icon={<IconLayoutColumns size={18} />}
+              label="Цех"
+              to="/orders/board"
+              active={boardShopFloorActive}
+              icon={<IconLayoutKanban size={18} />}
             />
           ) : null}
           {canCreateOrder ? (
             <MobileBottomAction
-              label="Новый заказ"
+              label="Новый"
               to="/orders/new"
               active={newOrderNavActive}
               icon={<IconPlus size={22} />}
             />
           ) : null}
-          <MobileBottomAction label="Открыть меню" icon={<IconMenu2 size={18} />} onClick={openMobileMenu} />
+          <MobileBottomAction label="Меню" icon={<IconMenu2 size={18} />} onClick={openMobileMenu} />
         </Group>
       </Box>
     </AppShell>
