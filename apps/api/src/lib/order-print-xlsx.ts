@@ -17,7 +17,7 @@ const orderIncludeForPrint = {
     include: { coatingType: true },
   },
   materialEntries: {
-    orderBy: [{ usedAt: "asc" as const }, { createdAt: "asc" as const }],
+    orderBy: { usedAt: "asc" as const },
   },
 } as const;
 
@@ -113,8 +113,13 @@ function formatQuantity(n: number): string {
 function fillMaterialsSection(ws: ExcelJS.Worksheet, materials: OrderForPrint["materialEntries"]): void {
   const section = clearMaterialsSection(ws);
   if (section.byLabel.size === 0 || materials.length === 0) return;
+  const sortedMaterials = [...materials].sort((a, b) => {
+    const diff = a.usedAt.getTime() - b.usedAt.getTime();
+    if (diff !== 0) return diff;
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
   const grouped = new Map<string, { qty: number; units: Set<string> }>();
-  for (const m of materials) {
+  for (const m of sortedMaterials) {
     const key = m.name.trim().toLowerCase();
     const prev = grouped.get(key) ?? { qty: 0, units: new Set<string>() };
     prev.qty += m.quantity;
