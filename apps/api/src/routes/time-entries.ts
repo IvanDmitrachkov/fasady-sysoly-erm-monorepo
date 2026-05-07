@@ -1,4 +1,7 @@
 import { Role } from "@prisma/client";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { FastifyPluginAsync } from "fastify";
 import ExcelJS from "exceljs";
 import { z } from "zod";
@@ -31,6 +34,28 @@ const reportQuery = z.object({
   to: z.string().datetime(),
   userId: z.string().uuid().optional(),
 });
+
+const NARYAD_TEMPLATE_FILE = "zakaz-naryad-emal.xlsx";
+
+function resolveNaryadTemplatePath(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(here, "../templates", NARYAD_TEMPLATE_FILE),
+    path.join(process.cwd(), "templates", NARYAD_TEMPLATE_FILE),
+    path.join(process.cwd(), "apps/api/templates", NARYAD_TEMPLATE_FILE),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  throw new Error(
+    `Не найден шаблон ${NARYAD_TEMPLATE_FILE}. Ожидается apps/api/templates/ или dist/templates/ после сборки.`,
+  );
+}
+
+function formatDateRuShort(d: Date | null | undefined): string {
+  if (!d) return "";
+  return d.toISOString().slice(0, 10);
+}
 
 function serializeEntry(e: {
   id: string;
@@ -347,6 +372,124 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
       ),
     };
   });
+
+  app.get(
+    "/orders/:orderId/time-entries.xlsx",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const { orderId } = request.params as { orderId: string };
+      const order = await app.prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          customer: true,
+          facades: { orderBy: { sortIndex: "asc" } },
+          materialEntries: { orderBy: { usedAt: "asc" } },
+        },
+      });
+      if (!order) {
+        return reply.code(404).send({ error: "Заказ не найден" });
+      }
+      const entries = await app.prisma.timeEntry.findMany({
+        where: { orderId },
+        include: timeEntryReportInclude,
+        orderBy: [{ startedAt: "asc" }, { workedAt: "asc" }],
+      });
+
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(resolveNaryadTemplatePath());
+      const ws = wb.worksheets[0];
+      if (!ws) {
+        return reply.code(500).send({ error: "В шаблоне наряда нет листов" });
+      }
+
+      ws.getCell("C2").value = formatOrderNumber(order.orderNumber);
+      ws.getCell("G2").value = order.customer.name;
+      ws.getCell("C3").value = formatDateRuShort(order.createdAt);
+      ws.getCell("G3").value = order.customer.phone ?? "";
+      ws.getCell("C4").value = formatDateRuShort(order.deadlineAt);
+      ws.getCell("G4").value = order.deliveryAddress?.trim() ?? "";
+      ws.getCell("C5").value = order.workType?.trim() ?? "";
+
+      for (let i = 0; i < Math.min(order.facades.length, 24); i++) {
+        const f = order.facades[i]!;
+        const r = 8 + i;
+        ws.getCell(`B${r}`).value = f.heightMm;
+        ws.getCell(`C${r}`).value = f.widthMm;
+        ws.getCell(`D${r}`).value = f.quantity ?? 1;
+        ws.getCell(`E${r}`).value = f.thicknessMm;
+        ws.getCell(`F${r}`).value = f.edgeRadius ?? "";
+        ws.getCell(`G${r}`).value = f.handleLabel ?? "";
+        ws.getCell(`H${r}`).value = f.millingLabel ?? "";
+        ws.getCell(`I${r}`).value = f.color ?? "";
+      }
+
+      const stageRows = new Map<string, number>([
+        ["раскрой", 36],
+        ["ремонт", 37],
+        ["подготовка", 38],
+        ["поклейка", 39],
+        ["упаковка", 40],
+        ["прочее", 41],
+      ]);
+      for (const r of stageRows.values()) {
+        ws.getCell(`C${r}`).value = "";
+        ws.getCell(`F${r}`).value = "";
+        ws.getCell(`H${r}`).value = "";
+      }
+      for (const e of entries) {
+        const key = e.stage.name.trim().toLowerCase();
+        const row = [...stageRows.entries()].find(([k]) => key.includes(k))?.[1] ?? stageRows.get("прочее");
+        if (!row) continue;
+        const startedAt = e.startedAt ?? e.workedAt;
+        const endedAt = e.endedAt;
+        const displayName = [e.user.lastName, e.user.firstName, e.user.patronymic].filter(Boolean).join(" ").trim() || e.user.email;
+        ws.getCell(`C${row}`).value = displayName;
+        ws.getCell(`F${row}`).value = startedAt.toISOString().slice(0, 16).replace("T", " ");
+        ws.getCell(`H${row}`).value = endedAt ? endedAt.toISOString().slice(0, 16).replace("T", " ") : "";
+      }
+
+      const materialRows = new Map<string, number>([
+        ["круг", 44],
+        ["полос", 45],
+        ["губк", 46],
+        ["ситеч", 47],
+        ["грунт перв", 48],
+        ["грунт втор", 49],
+        ["краск", 50],
+        ["лак", 51],
+        ["проч", 52],
+      ]);
+      for (const r of materialRows.values()) {
+        ws.getCell(`D${r}`).value = "";
+        ws.getCell(`H${r}`).value = "";
+      }
+      const otherMaterials: string[] = [];
+      let otherQty = 0;
+      for (const m of order.materialEntries) {
+        const key = m.name.trim().toLowerCase();
+        const found = [...materialRows.entries()].find(([k]) => key.includes(k));
+        if (found) {
+          const row = found[1];
+          ws.getCell(`D${row}`).value = m.unit;
+          const prev = Number(ws.getCell(`H${row}`).value ?? 0) || 0;
+          ws.getCell(`H${row}`).value = prev + m.quantity;
+        } else {
+          otherMaterials.push(m.name);
+          otherQty += m.quantity;
+        }
+      }
+      if (otherMaterials.length > 0) {
+        ws.getCell("D52").value = otherMaterials.join(", ");
+        ws.getCell("H52").value = otherQty;
+      }
+
+      const buf = await wb.xlsx.writeBuffer();
+      return reply
+        .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .header("Content-Disposition", `attachment; filename="naryad_zakaza_${formatOrderNumber(order.orderNumber).replace(/\\s/g, "_")}.xlsx"`)
+        .send(Buffer.from(buf));
+    },
+  );
 
   app.post(
     "/orders/:orderId/time-entries",

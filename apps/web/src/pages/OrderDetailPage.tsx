@@ -52,6 +52,7 @@ import {
 import { orderWorkStatesList } from "../api/order-work-states";
 import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
+import { orderTimeEntriesXlsxPath } from "../api/time-entries";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderCommentsSection } from "../components/OrderCommentsSection";
 import { OrderMaterialEntriesSection } from "../components/OrderMaterialEntriesSection";
@@ -350,7 +351,23 @@ export function OrderDetailPage() {
                       URL.revokeObjectURL(url);
                     }}
                   >
-                    XLSX
+                    Выгрузка заказа Excel
+                  </Button>
+                  <Button
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconFileDownload size={16} />}
+                    onClick={async () => {
+                      const blob = await apiBlob(orderTimeEntriesXlsxPath(orderId!));
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `tabel_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Выгрузка наряда Excel
                   </Button>
                 </>
               ) : null}

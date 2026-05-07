@@ -44,6 +44,10 @@ export function timeEntriesReportXlsxPath(params: { from: string; to: string; us
   return `/api/time-entries/report.xlsx?${q.toString()}`;
 }
 
+export function orderTimeEntriesXlsxPath(orderId: string) {
+  return `/api/orders/${orderId}/time-entries.xlsx`;
+}
+
 export function timeEntryUpdate(
   id: string,
   body: Partial<{
