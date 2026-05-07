@@ -35,6 +35,7 @@ import {
   IconScissors,
   IconTrash,
   IconUser,
+  IconTool,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { meRequest } from "../api/auth";
@@ -270,8 +271,8 @@ export function OrderDetailPage() {
   const o = order.data?.order;
   const tabFromQuery = searchParams.get("tab");
   const allowedTabs = canWorkWithOrder
-    ? ["overview", "facades", "finance", "time", "comments"]
-    : ["overview", "facades", "finance", "time"];
+    ? ["overview", "facades", "finance", "time", "materials", "comments"]
+    : ["overview", "facades", "finance", "time", "materials"];
   const activeTab = allowedTabs.includes(tabFromQuery ?? "") ? (tabFromQuery as string) : "overview";
 
   if (!orderId) {
@@ -497,6 +498,9 @@ export function OrderDetailPage() {
             <Tabs.Tab value="time" leftSection={<IconClockHour4 size={16} />}>
               Трудозатраты
             </Tabs.Tab>
+            <Tabs.Tab value="materials" leftSection={<IconTool size={16} />}>
+              Материалы
+            </Tabs.Tab>
             {canWorkWithOrder ? (
               <Tabs.Tab value="comments" leftSection={<IconLayoutKanban size={16} />}>
                 Комментарии
@@ -614,6 +618,8 @@ export function OrderDetailPage() {
 
         <Tabs.Panel value="time">
           <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
+        </Tabs.Panel>
+        <Tabs.Panel value="materials">
           <OrderMaterialEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
         </Tabs.Panel>
         {canWorkWithOrder ? (
