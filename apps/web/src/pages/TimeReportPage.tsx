@@ -158,7 +158,6 @@ export function TimeReportPage() {
               {dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")} - {e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}
             </Text>
           </div>
-          <Text fw={600}>{formatMinutes(e.minutes)}</Text>
         </Group>
 
         <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
@@ -273,7 +272,7 @@ export function TimeReportPage() {
           <Table striped withTableBorder visibleFrom="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th colSpan={7} style={{ textAlign: "right", fontWeight: 600 }}>
+                <Table.Th colSpan={6} style={{ textAlign: "right", fontWeight: 600 }}>
                   Всего трудозатрат: {formatMinutes(totalMinutes)} ({totalMinutes} мин)
                 </Table.Th>
               </Table.Tr>
@@ -282,7 +281,6 @@ export function TimeReportPage() {
                 <Table.Th>Начал</Table.Th>
                 <Table.Th>Закончил</Table.Th>
                 <Table.Th>Вид (этап)</Table.Th>
-                <Table.Th>Длительность</Table.Th>
                 <Table.Th>Комментарий</Table.Th>
                 <Table.Th style={{ width: 140 }} />
               </Table.Tr>
@@ -290,7 +288,7 @@ export function TimeReportPage() {
             <Table.Tbody>
               {report.data.entries.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>
+                  <Table.Td colSpan={6}>
                     <Text size="sm" c="dimmed">
                       Нет записей за выбранный период
                     </Text>
@@ -303,7 +301,6 @@ export function TimeReportPage() {
                     <Table.Td>{dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")}</Table.Td>
                     <Table.Td>{e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}</Table.Td>
                     <Table.Td>{e.stage.name}</Table.Td>
-                    <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
                     <Table.Td>
                       <Text size="sm" lineClamp={3}>
                         {e.comment?.trim() ? e.comment : "—"}

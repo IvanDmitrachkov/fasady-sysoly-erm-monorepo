@@ -35,6 +35,7 @@ model User {
   auditLogs    AuditLog[]
   orderComments OrderComment[]
   timeEntries  TimeEntry[]
+  materialEntries OrderMaterialEntry[]
   customer     Customer?   @relation(fields: [customerId], references: [id])
 }
 
@@ -49,6 +50,7 @@ model Stage {
   updatedAt   DateTime    @updatedAt
   orders      Order[]     @relation("OrderCurrentStage")
   timeEntries TimeEntry[]
+  materialEntries OrderMaterialEntry[]
 }
 
 /// * Под-статус заказа на текущем этапе (очередь / в работе / …). Справочник в БД.
@@ -148,6 +150,7 @@ model Order {
   customer            Customer    @relation(fields: [customerId], references: [id])
   comments            OrderComment[]
   timeEntries         TimeEntry[]
+  materialEntries     OrderMaterialEntry[]
 }
 
 model OrderComment {
@@ -184,6 +187,25 @@ model TimeEntry {
 
   @@index([orderId, startedAt])
   @@index([orderId, endedAt])
+}
+
+model OrderMaterialEntry {
+  id        String   @id @default(uuid())
+  orderId   String
+  userId    String
+  stageId   String?
+  name      String
+  unit      String
+  quantity  Float
+  comment   String?
+  usedAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  stage     Stage?   @relation(fields: [stageId], references: [id])
+
+  @@index([orderId, usedAt])
 }
 
 model Facade {

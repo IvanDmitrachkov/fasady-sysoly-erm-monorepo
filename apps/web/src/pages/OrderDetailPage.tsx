@@ -54,6 +54,7 @@ import { apiBlob } from "../api/http";
 import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderCommentsSection } from "../components/OrderCommentsSection";
+import { OrderMaterialEntriesSection } from "../components/OrderMaterialEntriesSection";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
   buildOrderWritePayload,
@@ -589,6 +590,7 @@ export function OrderDetailPage() {
 
         <Tabs.Panel value="time">
           <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
+          <OrderMaterialEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
         </Tabs.Panel>
         {canWorkWithOrder ? (
           <Tabs.Panel value="comments">

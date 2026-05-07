@@ -1,11 +1,12 @@
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Divider, Group, Paper, Select, Stack, Table, Text, Textarea, Title } from "@mantine/core";
+import { Button, Divider, Group, Modal, Paper, Select, Stack, Table, Text, Textarea, Title } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import { z } from "zod";
 import dayjs from "dayjs";
-import { timeEntriesList, timeEntryCreate } from "../api/time-entries";
+import { timeEntriesList, timeEntryCreate, timeEntryUpdate, type TimeEntryDto } from "../api/time-entries";
 import { userDisplayName } from "../lib/user-display-name";
 import { stagesList } from "../api/stages";
 
@@ -54,6 +55,38 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
       });
     },
   });
+  const [editing, setEditing] = useState<TimeEntryDto | null>(null);
+  const editForm = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      stageId: "",
+      startedAt: new Date(),
+      endedAt: dayjs().add(1, "hour").toDate(),
+      comment: "",
+    },
+  });
+  useEffect(() => {
+    if (!editing) return;
+    editForm.reset({
+      stageId: editing.stage.id,
+      startedAt: new Date(editing.startedAt),
+      endedAt: editing.endedAt ? new Date(editing.endedAt) : new Date(editing.startedAt),
+      comment: editing.comment ?? "",
+    });
+  }, [editing, editForm]);
+  const updateMut = useMutation({
+    mutationFn: (body: { id: string; values: FormValues }) =>
+      timeEntryUpdate(body.id, {
+        stageId: body.values.stageId,
+        startedAt: body.values.startedAt.toISOString(),
+        endedAt: body.values.endedAt.toISOString(),
+        comment: body.values.comment?.trim() ? body.values.comment : null,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["timeEntries", orderId] });
+      setEditing(null);
+    },
+  });
 
   const stageOptions = (stages.data?.stages ?? []).map((s) => ({ value: s.id, label: s.name }));
 
@@ -80,15 +113,15 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
               <Table.Th>Начал</Table.Th>
               <Table.Th>Закончил</Table.Th>
               <Table.Th>Этап</Table.Th>
-              <Table.Th>Длительность</Table.Th>
               <Table.Th>Кто</Table.Th>
               <Table.Th>Комментарий</Table.Th>
+                {canEdit ? <Table.Th style={{ width: 140 }} /> : null}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {entries.data.entries.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={6}>
+                <Table.Td colSpan={canEdit ? 6 : 5}>
                   <Text size="sm" c="dimmed">
                     Записей пока нет
                   </Text>
@@ -100,7 +133,6 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
                   <Table.Td>{dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")}</Table.Td>
                   <Table.Td>{e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}</Table.Td>
                   <Table.Td>{e.stage.name}</Table.Td>
-                  <Table.Td>{e.minutes} мин</Table.Td>
                   <Table.Td>
                     <Text size="sm">{userDisplayName(e.user)}</Text>
                   </Table.Td>
@@ -109,12 +141,83 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
                       {e.comment?.trim() ? e.comment : "—"}
                     </Text>
                   </Table.Td>
+                  {canEdit ? (
+                    <Table.Td>
+                      <Button size="xs" variant="light" onClick={() => setEditing(e)}>
+                        Редактировать
+                      </Button>
+                    </Table.Td>
+                  ) : null}
                 </Table.Tr>
               ))
             )}
           </Table.Tbody>
         </Table>
       ) : null}
+      <Modal opened={!!editing} onClose={() => setEditing(null)} title="Редактировать трудозатрату" size="md">
+        <form
+          onSubmit={editForm.handleSubmit((values) => {
+            if (!editing) return;
+            updateMut.mutate({ id: editing.id, values });
+          })}
+        >
+          <Stack gap="sm">
+            <Controller
+              name="stageId"
+              control={editForm.control}
+              render={({ field, fieldState }) => (
+                <Select
+                  label="Этап"
+                  data={stageOptions}
+                  value={field.value || null}
+                  onChange={(val) => field.onChange(val ?? "")}
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <Controller
+              name="startedAt"
+              control={editForm.control}
+              render={({ field, fieldState }) => (
+                <DateTimePicker
+                  label="Начал"
+                  value={field.value}
+                  onChange={(d) => field.onChange(d ?? new Date())}
+                  valueFormat="DD.MM.YYYY HH:mm"
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <Controller
+              name="endedAt"
+              control={editForm.control}
+              render={({ field, fieldState }) => (
+                <DateTimePicker
+                  label="Закончил"
+                  value={field.value}
+                  onChange={(d) => field.onChange(d ?? new Date())}
+                  valueFormat="DD.MM.YYYY HH:mm"
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <Textarea label="Комментарий" minRows={2} {...editForm.register("comment")} />
+            {updateMut.isError ? (
+              <Text c="red" size="sm">
+                {updateMut.error instanceof Error ? updateMut.error.message : "Ошибка"}
+              </Text>
+            ) : null}
+            <Group justify="flex-end">
+              <Button variant="default" type="button" onClick={() => setEditing(null)}>
+                Отмена
+              </Button>
+              <Button type="submit" loading={updateMut.isPending}>
+                Сохранить
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
 
       {canEdit ? (
         <>

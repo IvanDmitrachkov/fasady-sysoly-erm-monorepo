@@ -23,6 +23,7 @@ import { orderPrintRoutes } from "./routes/order-print.js";
 import { facadeTypesRoutes } from "./routes/facade-types.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { orderWorkStatesRoutes } from "./routes/order-work-states.js";
+import { orderMaterialsRoutes } from "./routes/order-materials.js";
 
 function defaultWebDistPath(): string {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web-dist");
@@ -108,6 +109,7 @@ export async function buildApp(env: Env) {
   await app.register(auditRoutes, { prefix: "/api" });
   await app.register(activityRoutes, { prefix: "/api" });
   await app.register(timeEntriesRoutes, { prefix: "/api" });
+  await app.register(orderMaterialsRoutes, { prefix: "/api" });
   await app.register(usersRoutes, { prefix: "/api" });
   await app.register(reportsRoutes, { prefix: "/api" });
 
