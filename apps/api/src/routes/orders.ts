@@ -112,6 +112,7 @@ const listOrdersQuery = z.object({
   scope: z.enum(["active", "archive", "all"]).default("active"),
 });
 const COMMENT_EDIT_WINDOW_MS = 10 * 60 * 1000;
+const WORK_STATE_IN_PROGRESS_SLUG = "in_progress";
 
 async function fetchOrder(prisma: PrismaClient, id: string): Promise<OrderWithRelations | null> {
   return prisma.order.findFirst({
@@ -709,13 +710,54 @@ export const ordersRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "На текущем этапе под-статусы отключены" });
       }
 
-      const updated = await app.prisma.order.update({
-        where: { id },
-        data: { workStateId: ws.id },
-        include: orderInclude,
+      const uid = authUserId(request);
+      const now = new Date();
+      const updated = await app.prisma.$transaction(async (tx) => {
+        const orderUpdated = await tx.order.update({
+          where: { id },
+          data: { workStateId: ws.id },
+          include: orderInclude,
+        });
+        if (ws.slug === WORK_STATE_IN_PROGRESS_SLUG) {
+          const openEntry = await tx.timeEntry.findFirst({
+            where: { orderId: id, endedAt: null },
+            select: { id: true },
+          });
+          if (!openEntry) {
+            await tx.timeEntry.create({
+              data: {
+                orderId: id,
+                userId: uid,
+                stageId: order.currentStageId,
+                startedAt: now,
+                endedAt: null,
+                workedAt: now,
+                minutes: 1,
+                comment: null,
+              },
+            });
+          }
+        } else {
+          const openEntry = await tx.timeEntry.findFirst({
+            where: { orderId: id, endedAt: null },
+            orderBy: { startedAt: "asc" },
+          });
+          if (openEntry) {
+            const startedAt = openEntry.startedAt ?? openEntry.workedAt;
+            const minutes = Math.max(1, Math.round((now.getTime() - startedAt.getTime()) / 60000));
+            await tx.timeEntry.update({
+              where: { id: openEntry.id },
+              data: {
+                endedAt: now,
+                workedAt: startedAt,
+                minutes,
+              },
+            });
+          }
+        }
+        return orderUpdated;
       });
 
-      const uid = authUserId(request);
       await writeAudit(
         app.prisma,
         uid,

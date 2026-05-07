@@ -1,8 +1,8 @@
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Divider, Group, NumberInput, Paper, Select, Stack, Table, Text, Textarea, Title } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { Button, Divider, Group, Paper, Select, Stack, Table, Text, Textarea, Title } from "@mantine/core";
+import { DateTimePicker } from "@mantine/dates";
 import { z } from "zod";
 import dayjs from "dayjs";
 import { timeEntriesList, timeEntryCreate } from "../api/time-entries";
@@ -11,19 +11,15 @@ import { stagesList } from "../api/stages";
 
 const formSchema = z.object({
   stageId: z.string().min(1, "Выберите этап"),
-  minutes: z.number().int().positive("Укажите минуты > 0"),
+  startedAt: z.date({ message: "Укажите начало" }),
+  endedAt: z.date({ message: "Укажите окончание" }),
   comment: z.string().optional(),
-  workedAt: z.date({ message: "Укажите дату" }),
+}).refine((v) => v.endedAt > v.startedAt, {
+  message: "Окончание должно быть позже начала",
+  path: ["endedAt"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-function formatMinutes(m: number): string {
-  if (m < 60) return `${m} мин`;
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return min ? `${h} ч ${min} мин` : `${h} ч`;
-}
 
 type Props = { orderId: string; canEdit: boolean };
 
@@ -40,9 +36,9 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       stageId: "",
-      minutes: 30,
+      startedAt: new Date(),
+      endedAt: dayjs().add(1, "hour").toDate(),
       comment: "",
-      workedAt: new Date(),
     },
   });
 
@@ -52,9 +48,9 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
       void qc.invalidateQueries({ queryKey: ["timeEntries", orderId] });
       form.reset({
         stageId: form.getValues("stageId"),
-        minutes: 30,
+        startedAt: new Date(),
+        endedAt: dayjs().add(1, "hour").toDate(),
         comment: "",
-        workedAt: new Date(),
       });
     },
   });
@@ -67,7 +63,7 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
         Учёт времени
       </Title>
       <Text size="sm" c="dimmed" mb="md">
-        Записи трудозатрат по заказу (минуты, этап, дата работы).
+        Список выполненных работ по заказу (этап, начало/окончание, комментарий).
       </Text>
 
       {entries.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
@@ -81,9 +77,10 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
         <Table striped withTableBorder mb="lg">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Дата работы</Table.Th>
+              <Table.Th>Начал</Table.Th>
+              <Table.Th>Закончил</Table.Th>
               <Table.Th>Этап</Table.Th>
-              <Table.Th>Время</Table.Th>
+              <Table.Th>Длительность</Table.Th>
               <Table.Th>Кто</Table.Th>
               <Table.Th>Комментарий</Table.Th>
             </Table.Tr>
@@ -91,7 +88,7 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
           <Table.Tbody>
             {entries.data.entries.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={6}>
                   <Text size="sm" c="dimmed">
                     Записей пока нет
                   </Text>
@@ -100,9 +97,10 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
             ) : (
               entries.data.entries.map((e) => (
                 <Table.Tr key={e.id}>
-                  <Table.Td>{dayjs(e.workedAt).format("D MMM YYYY")}</Table.Td>
+                  <Table.Td>{dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")}</Table.Td>
+                  <Table.Td>{e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}</Table.Td>
                   <Table.Td>{e.stage.name}</Table.Td>
-                  <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
+                  <Table.Td>{e.minutes} мин</Table.Td>
                   <Table.Td>
                     <Text size="sm">{userDisplayName(e.user)}</Text>
                   </Table.Td>
@@ -125,9 +123,9 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
             onSubmit={form.handleSubmit((v) =>
               createMut.mutate({
                 stageId: v.stageId,
-                minutes: v.minutes,
+                startedAt: v.startedAt.toISOString(),
+                endedAt: v.endedAt.toISOString(),
                 comment: v.comment?.trim() ? v.comment : null,
-                workedAt: dayjs(v.workedAt).startOf("day").toISOString(),
               }),
             )}
           >
@@ -147,28 +145,27 @@ export function OrderTimeEntriesSection({ orderId, canEdit }: Props) {
                 )}
               />
               <Controller
-                name="minutes"
+                name="startedAt"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <NumberInput
-                    label="Минуты"
-                    min={1}
-                    max={24 * 60}
+                  <DateTimePicker
+                    label="Начал"
                     value={field.value}
-                    onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
+                    onChange={(d) => field.onChange(d ?? new Date())}
+                    valueFormat="DD.MM.YYYY HH:mm"
                     error={fieldState.error?.message}
                   />
                 )}
               />
               <Controller
-                name="workedAt"
+                name="endedAt"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <DatePickerInput
-                    label="Дата работы"
+                  <DateTimePicker
+                    label="Закончил"
                     value={field.value}
                     onChange={(d) => field.onChange(d ?? new Date())}
-                    locale="ru"
+                    valueFormat="DD.MM.YYYY HH:mm"
                     error={fieldState.error?.message}
                   />
                 )}

@@ -4,6 +4,8 @@ export type TimeEntryDto = {
   id: string;
   minutes: number;
   comment: string | null;
+  startedAt: string;
+  endedAt: string | null;
   workedAt: string;
   createdAt: string;
   user: {
@@ -34,10 +36,20 @@ export function timeEntriesReport(params: { from: string; to: string; userId?: s
   );
 }
 
+export function timeEntriesReportXlsxPath(params: { from: string; to: string; userId?: string }) {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.userId) q.set("userId", params.userId);
+  return `/api/time-entries/report.xlsx?${q.toString()}`;
+}
+
 export function timeEntryUpdate(
   id: string,
   body: Partial<{
     stageId: string;
+    startedAt: string;
+    endedAt: string;
     minutes: number;
     comment: string | null;
     workedAt: string;
@@ -53,9 +65,9 @@ export function timeEntryCreate(
   orderId: string,
   body: {
     stageId: string;
-    minutes: number;
+    startedAt: string;
+    endedAt: string;
     comment?: string | null;
-    workedAt: string;
   },
 ) {
   return apiJson<{ entry: TimeEntryDto }>(`/api/orders/${orderId}/time-entries`, {

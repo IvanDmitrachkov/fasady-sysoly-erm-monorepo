@@ -6,7 +6,6 @@ import {
   Button,
   Group,
   Modal,
-  NumberInput,
   Paper,
   Select,
   SimpleGrid,
@@ -16,7 +15,7 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { DatePickerInput, DateTimePicker } from "@mantine/dates";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import dayjs from "dayjs";
@@ -24,6 +23,7 @@ import { meRequest } from "../api/auth";
 import { stagesList } from "../api/stages";
 import {
   timeEntriesReport,
+  timeEntriesReportXlsxPath,
   timeEntryUpdate,
   type TimeEntryReportDto,
 } from "../api/time-entries";
@@ -40,9 +40,12 @@ function formatMinutes(m: number): string {
 
 const editSchema = z.object({
   stageId: z.string().min(1, "Выберите этап"),
-  minutes: z.number().int().positive("Укажите минуты > 0"),
+  startedAt: z.date({ message: "Укажите начало" }),
+  endedAt: z.date({ message: "Укажите окончание" }),
   comment: z.string().optional(),
-  workedAt: z.date({ message: "Укажите дату" }),
+}).refine((v) => v.endedAt > v.startedAt, {
+  message: "Окончание должно быть позже начала",
+  path: ["endedAt"],
 });
 
 type EditFormValues = z.infer<typeof editSchema>;
@@ -112,9 +115,9 @@ export function TimeReportPage() {
     resolver: zodResolver(editSchema),
     defaultValues: {
       stageId: "",
-      minutes: 30,
+      startedAt: new Date(),
+      endedAt: dayjs().add(1, "hour").toDate(),
       comment: "",
-      workedAt: new Date(),
     },
   });
 
@@ -122,9 +125,9 @@ export function TimeReportPage() {
     if (!editing) return;
     editForm.reset({
       stageId: editing.stage.id,
-      minutes: editing.minutes,
+      startedAt: new Date(editing.startedAt),
+      endedAt: editing.endedAt ? new Date(editing.endedAt) : new Date(editing.startedAt),
       comment: editing.comment ?? "",
-      workedAt: new Date(editing.workedAt),
     });
   }, [editing, editForm]);
 
@@ -132,9 +135,9 @@ export function TimeReportPage() {
     mutationFn: (body: { id: string; values: EditFormValues }) =>
       timeEntryUpdate(body.id, {
         stageId: body.values.stageId,
-        minutes: body.values.minutes,
+        startedAt: body.values.startedAt.toISOString(),
+        endedAt: body.values.endedAt.toISOString(),
         comment: body.values.comment?.trim() ? body.values.comment : null,
-        workedAt: dayjs(body.values.workedAt).startOf("day").toISOString(),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["timeEntriesReport"] });
@@ -152,7 +155,7 @@ export function TimeReportPage() {
               №{e.order.orderNumber}
             </Text>
             <Text size="xs" c="dimmed">
-              {dayjs(e.workedAt).format("DD.MM.YYYY")}
+              {dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")} - {e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}
             </Text>
           </div>
           <Text fw={600}>{formatMinutes(e.minutes)}</Text>
@@ -226,6 +229,19 @@ export function TimeReportPage() {
             w="100%"
           />
         </Group>
+        {fromIso && toIso ? (
+          <Button
+            component="a"
+            variant="light"
+            href={timeEntriesReportXlsxPath({
+              from: fromIso,
+              to: toIso,
+              ...(isAdmin && employeeId ? { userId: employeeId } : {}),
+            })}
+          >
+            Скачать табель Excel
+          </Button>
+        ) : null}
       </Stack>
 
       {report.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
@@ -257,15 +273,16 @@ export function TimeReportPage() {
           <Table striped withTableBorder visibleFrom="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th colSpan={6} style={{ textAlign: "right", fontWeight: 600 }}>
+                <Table.Th colSpan={7} style={{ textAlign: "right", fontWeight: 600 }}>
                   Всего трудозатрат: {formatMinutes(totalMinutes)} ({totalMinutes} мин)
                 </Table.Th>
               </Table.Tr>
               <Table.Tr>
                 <Table.Th>Заказ</Table.Th>
-                <Table.Th>Дата работы</Table.Th>
+                <Table.Th>Начал</Table.Th>
+                <Table.Th>Закончил</Table.Th>
                 <Table.Th>Вид (этап)</Table.Th>
-                <Table.Th>Время</Table.Th>
+                <Table.Th>Длительность</Table.Th>
                 <Table.Th>Комментарий</Table.Th>
                 <Table.Th style={{ width: 140 }} />
               </Table.Tr>
@@ -273,7 +290,7 @@ export function TimeReportPage() {
             <Table.Tbody>
               {report.data.entries.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={6}>
+                  <Table.Td colSpan={7}>
                     <Text size="sm" c="dimmed">
                       Нет записей за выбранный период
                     </Text>
@@ -283,7 +300,8 @@ export function TimeReportPage() {
                 report.data.entries.map((e) => (
                   <Table.Tr key={e.id}>
                     <Table.Td>№{e.order.orderNumber}</Table.Td>
-                    <Table.Td>{dayjs(e.workedAt).format("DD.MM.YYYY")}</Table.Td>
+                    <Table.Td>{dayjs(e.startedAt).format("DD.MM.YYYY HH:mm")}</Table.Td>
+                    <Table.Td>{e.endedAt ? dayjs(e.endedAt).format("DD.MM.YYYY HH:mm") : "—"}</Table.Td>
                     <Table.Td>{e.stage.name}</Table.Td>
                     <Table.Td>{formatMinutes(e.minutes)}</Table.Td>
                     <Table.Td>
@@ -332,29 +350,28 @@ export function TimeReportPage() {
               )}
             />
             <Controller
-              name="minutes"
+              name="startedAt"
               control={editForm.control}
               render={({ field, fieldState }) => (
-                <NumberInput
-                  label="Время, минуты"
-                  min={1}
-                  max={24 * 60}
+                <DateTimePicker
+                  label="Начал"
                   value={field.value}
-                  onChange={(n) => field.onChange(typeof n === "number" ? n : 1)}
+                  onChange={(d) => field.onChange(d ?? new Date())}
+                  valueFormat="DD.MM.YYYY HH:mm"
                   error={fieldState.error?.message}
                   w="100%"
                 />
               )}
             />
             <Controller
-              name="workedAt"
+              name="endedAt"
               control={editForm.control}
               render={({ field, fieldState }) => (
-                <DatePickerInput
-                  label="Дата работы"
+                <DateTimePicker
+                  label="Закончил"
                   value={field.value}
                   onChange={(d) => field.onChange(d ?? new Date())}
-                  locale="ru"
+                  valueFormat="DD.MM.YYYY HH:mm"
                   error={fieldState.error?.message}
                   w="100%"
                 />

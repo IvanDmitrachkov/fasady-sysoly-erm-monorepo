@@ -169,6 +169,10 @@ model TimeEntry {
   orderId   String
   userId    String
   stageId   String
+  /// * Начало работы по записи.
+  startedAt DateTime?
+  /// * Окончание работы по записи (null = запись открыта).
+  endedAt   DateTime?
   /// * Длительность, минуты
   minutes   Int
   comment   String?
@@ -177,6 +181,9 @@ model TimeEntry {
   stage     Stage    @relation(fields: [stageId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, startedAt])
+  @@index([orderId, endedAt])
 }
 
 model Facade {

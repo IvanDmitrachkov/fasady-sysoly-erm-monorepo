@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
+import ExcelJS from "exceljs";
 import { z } from "zod";
 import { authPayload, authUserId, requireJwt, requireRoles } from "../auth/preHandlers.js";
 import { writeAudit } from "../lib/audit.js";
@@ -7,14 +8,18 @@ import { formatOrderNumber } from "../lib/order-number.js";
 
 const createBody = z.object({
   stageId: z.string().min(1),
-  minutes: z.number().int().positive(),
+  startedAt: z.string().datetime().optional(),
+  endedAt: z.string().datetime().optional(),
+  minutes: z.number().int().positive().optional(),
   comment: z.string().optional().nullable(),
-  workedAt: z.string().datetime(),
+  workedAt: z.string().datetime().optional(),
 });
 
 const patchBody = z
   .object({
     stageId: z.string().min(1).optional(),
+    startedAt: z.string().datetime().optional(),
+    endedAt: z.string().datetime().optional(),
     minutes: z.number().int().positive().optional(),
     comment: z.string().optional().nullable(),
     workedAt: z.string().datetime().optional(),
@@ -31,6 +36,8 @@ function serializeEntry(e: {
   id: string;
   minutes: number;
   comment: string | null;
+  startedAt: Date | null;
+  endedAt: Date | null;
   workedAt: Date;
   createdAt: Date;
   user: {
@@ -43,10 +50,18 @@ function serializeEntry(e: {
   stage: { id: string; name: string };
   order: { id: string; orderNumber: number };
 }) {
+  const startedAt = e.startedAt ?? e.workedAt;
+  const endedAt = e.endedAt;
+  const durationMinutes =
+    startedAt && endedAt
+      ? Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000))
+      : e.minutes;
   return {
     id: e.id,
-    minutes: e.minutes,
+    minutes: durationMinutes,
     comment: e.comment,
+    startedAt: startedAt.toISOString(),
+    endedAt: endedAt?.toISOString() ?? null,
     workedAt: e.workedAt.toISOString(),
     createdAt: e.createdAt.toISOString(),
     user: {
@@ -62,6 +77,47 @@ function serializeEntry(e: {
       orderNumber: formatOrderNumber(e.order.orderNumber),
     },
   };
+}
+
+function resolveTimeInput(data: {
+  startedAt?: string;
+  endedAt?: string;
+  workedAt?: string;
+  minutes?: number;
+}): { startedAt: Date; endedAt: Date | null; workedAt: Date; minutes: number } | { error: string } {
+  if (data.startedAt) {
+    const startedAt = new Date(data.startedAt);
+    const endedAt = data.endedAt ? new Date(data.endedAt) : null;
+    if (!Number.isFinite(startedAt.getTime())) return { error: "Некорректная дата начала" };
+    if (endedAt && !Number.isFinite(endedAt.getTime())) return { error: "Некорректная дата окончания" };
+    if (endedAt && endedAt <= startedAt) return { error: "Дата окончания должна быть позже начала" };
+    const minutes = endedAt ? Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000)) : 1;
+    return {
+      startedAt,
+      endedAt,
+      workedAt: startedAt,
+      minutes,
+    };
+  }
+  if (data.workedAt) {
+    const workedAt = new Date(data.workedAt);
+    if (!Number.isFinite(workedAt.getTime())) return { error: "Некорректная дата работы" };
+    return {
+      startedAt: workedAt,
+      endedAt: workedAt,
+      workedAt,
+      minutes: data.minutes ?? 1,
+    };
+  }
+  return { error: "Укажите дату начала и окончания" };
+}
+
+function durationMinutes(e: { startedAt: Date | null; endedAt: Date | null; workedAt: Date; minutes: number }): number {
+  const startedAt = e.startedAt ?? e.workedAt;
+  if (e.endedAt && e.endedAt > startedAt) {
+    return Math.max(1, Math.round((e.endedAt.getTime() - startedAt.getTime()) / 60000));
+  }
+  return e.minutes;
 }
 
 const timeEntryInclude = { user: true, stage: true } as const;
@@ -101,18 +157,89 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
       const entries = await app.prisma.timeEntry.findMany({
         where: {
           userId: targetUserId,
-          workedAt: { gte: from, lte: to },
+          OR: [{ startedAt: { gte: from, lte: to } }, { workedAt: { gte: from, lte: to } }],
         },
         include: timeEntryReportInclude,
-        orderBy: { workedAt: "desc" },
+        orderBy: [{ startedAt: "desc" }, { workedAt: "desc" }],
       });
 
-      const totalMinutes = entries.reduce((acc, e) => acc + e.minutes, 0);
+      const totalMinutes = entries.reduce((acc, e) => acc + durationMinutes(e), 0);
 
       return {
         entries: entries.map((e) => serializeEntry(e)),
         totalMinutes,
       };
+    },
+  );
+
+  app.get(
+    "/time-entries/report.xlsx",
+    { preHandler: [requireRoles(Role.ADMIN, Role.WORKER)] },
+    async (request, reply) => {
+      const p = authPayload(request);
+      const q = reportQuery.safeParse(request.query);
+      if (!q.success) {
+        return reply.code(400).send({ error: "Некорректные параметры", details: q.error.flatten() });
+      }
+      let targetUserId = authUserId(request);
+      if (p.role === Role.ADMIN) {
+        if (!q.data.userId) {
+          return reply.code(400).send({ error: "Укажите сотрудника" });
+        }
+        targetUserId = q.data.userId;
+      }
+      const from = new Date(q.data.from);
+      const to = new Date(q.data.to);
+      const user = await app.prisma.user.findUnique({ where: { id: targetUserId } });
+      if (!user) return reply.code(404).send({ error: "Пользователь не найден" });
+
+      const entries = await app.prisma.timeEntry.findMany({
+        where: {
+          userId: targetUserId,
+          OR: [{ startedAt: { gte: from, lte: to } }, { workedAt: { gte: from, lte: to } }],
+        },
+        include: timeEntryReportInclude,
+        orderBy: [{ startedAt: "asc" }, { workedAt: "asc" }],
+      });
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Табель");
+      const displayName = [user.lastName, user.firstName, user.patronymic].filter(Boolean).join(" ").trim() || user.email;
+      ws.getCell("A1").value = "Табель работ";
+      ws.getCell("A2").value = `Сотрудник: ${displayName}`;
+      ws.getCell("A3").value = `Период: ${from.toISOString().slice(0, 10)} — ${to.toISOString().slice(0, 10)}`;
+      ws.getRow(5).values = ["#", "Заказ", "Этап", "Начал", "Закончил", "Минут", "Комментарий"];
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i]!;
+        const startedAt = e.startedAt ?? e.workedAt;
+        const endedAt = e.endedAt;
+        ws.addRow([
+          i + 1,
+          formatOrderNumber(e.order.orderNumber),
+          e.stage.name,
+          startedAt.toISOString().slice(0, 16).replace("T", " "),
+          endedAt ? endedAt.toISOString().slice(0, 16).replace("T", " ") : "—",
+          durationMinutes(e),
+          e.comment ?? "",
+        ]);
+      }
+      ws.columns = [
+        { width: 6 },
+        { width: 14 },
+        { width: 26 },
+        { width: 20 },
+        { width: 20 },
+        { width: 10 },
+        { width: 48 },
+      ];
+      const header = ws.getRow(5);
+      header.font = { bold: true };
+
+      const buf = await wb.xlsx.writeBuffer();
+      return reply
+        .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .header("Content-Disposition", `attachment; filename="tabel_${targetUserId}_${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}.xlsx"`)
+        .send(Buffer.from(buf));
     },
   );
 
@@ -146,6 +273,21 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
           return reply.code(400).send({ error: "Этап не найден" });
         }
       }
+      const hasTimeFields =
+        parsed.data.startedAt !== undefined ||
+        parsed.data.endedAt !== undefined ||
+        parsed.data.workedAt !== undefined;
+      const resolved = hasTimeFields
+        ? resolveTimeInput({
+            startedAt: parsed.data.startedAt ?? existing.startedAt?.toISOString() ?? existing.workedAt.toISOString(),
+            endedAt: parsed.data.endedAt ?? existing.endedAt?.toISOString(),
+            workedAt: parsed.data.workedAt ?? existing.workedAt.toISOString(),
+            minutes: parsed.data.minutes ?? existing.minutes,
+          })
+        : { error: "skip" as const };
+      if ("error" in resolved && resolved.error !== "skip") {
+        return reply.code(400).send({ error: resolved.error });
+      }
 
       const updated = await app.prisma.timeEntry.update({
         where: { id },
@@ -153,7 +295,14 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
           ...(parsed.data.stageId !== undefined ? { stageId: parsed.data.stageId } : {}),
           ...(parsed.data.minutes !== undefined ? { minutes: parsed.data.minutes } : {}),
           ...(parsed.data.comment !== undefined ? { comment: parsed.data.comment } : {}),
-          ...(parsed.data.workedAt !== undefined ? { workedAt: new Date(parsed.data.workedAt) } : {}),
+          ...("error" in resolved
+            ? {}
+            : {
+                startedAt: resolved.startedAt,
+                endedAt: resolved.endedAt,
+                workedAt: resolved.workedAt,
+                minutes: resolved.minutes,
+              }),
         },
         include: timeEntryReportInclude,
       });
@@ -186,25 +335,16 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
     const entries = await app.prisma.timeEntry.findMany({
       where: { orderId },
       include: timeEntryInclude,
-      orderBy: { workedAt: "desc" },
+      orderBy: [{ startedAt: "desc" }, { workedAt: "desc" }],
     });
 
     return {
-      entries: entries.map((e) => ({
-        id: e.id,
-        minutes: e.minutes,
-        comment: e.comment,
-        workedAt: e.workedAt.toISOString(),
-        createdAt: e.createdAt.toISOString(),
-        user: {
-          id: e.user.id,
-          email: e.user.email,
-          firstName: e.user.firstName,
-          lastName: e.user.lastName,
-          patronymic: e.user.patronymic,
-        },
-        stage: { id: e.stage.id, name: e.stage.name },
-      })),
+      entries: entries.map((e) =>
+        serializeEntry({
+          ...e,
+          order: { id: order.id, orderNumber: order.orderNumber },
+        }),
+      ),
     };
   });
 
@@ -227,6 +367,10 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
       if (!stage) {
         return reply.code(400).send({ error: "Этап не найден" });
       }
+      const resolved = resolveTimeInput(parsed.data);
+      if ("error" in resolved) {
+        return reply.code(400).send({ error: resolved.error });
+      }
 
       const uid = authUserId(request);
       const entry = await app.prisma.timeEntry.create({
@@ -234,11 +378,13 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
           orderId,
           userId: uid,
           stageId: stage.id,
-          minutes: parsed.data.minutes,
+          minutes: resolved.minutes,
           comment: parsed.data.comment ?? null,
-          workedAt: new Date(parsed.data.workedAt),
+          workedAt: resolved.workedAt,
+          startedAt: resolved.startedAt,
+          endedAt: resolved.endedAt,
         },
-        include: timeEntryInclude,
+        include: timeEntryReportInclude,
       });
 
       await writeAudit(
@@ -250,23 +396,7 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
         entry.id,
       );
 
-      return reply.code(201).send({
-        entry: {
-          id: entry.id,
-          minutes: entry.minutes,
-          comment: entry.comment,
-          workedAt: entry.workedAt.toISOString(),
-          createdAt: entry.createdAt.toISOString(),
-          user: {
-            id: entry.user.id,
-            email: entry.user.email,
-            firstName: entry.user.firstName,
-            lastName: entry.user.lastName,
-            patronymic: entry.user.patronymic,
-          },
-          stage: { id: entry.stage.id, name: entry.stage.name },
-        },
-      });
+      return reply.code(201).send({ entry: serializeEntry(entry) });
     },
   );
 };
