@@ -115,6 +115,7 @@ export function OrderDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddTab, setQuickAddTab] = useState<"time" | "material">("time");
   const [moveStageId, setMoveStageId] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
@@ -379,11 +380,6 @@ export function OrderDetailPage() {
                     Редактировать
                   </Button>
               ) : null}
-              {canWorkWithOrder ? (
-                <Button size="sm" variant="light" onClick={() => setQuickAddOpen(true)}>
-                  Добавить запись
-                </Button>
-              ) : null}
               {isAdmin ? (
                 <Button
                   color="red"
@@ -619,9 +615,37 @@ export function OrderDetailPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="time">
+          {canWorkWithOrder ? (
+            <Group justify="flex-end" mb="sm">
+              <Button
+                size="sm"
+                variant="light"
+                onClick={() => {
+                  setQuickAddTab("time");
+                  setQuickAddOpen(true);
+                }}
+              >
+                Добавить трудозатрату
+              </Button>
+            </Group>
+          ) : null}
           <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
         </Tabs.Panel>
         <Tabs.Panel value="materials">
+          {canWorkWithOrder ? (
+            <Group justify="flex-end" mb="sm">
+              <Button
+                size="sm"
+                variant="light"
+                onClick={() => {
+                  setQuickAddTab("material");
+                  setQuickAddOpen(true);
+                }}
+              >
+                Добавить материал
+              </Button>
+            </Group>
+          ) : null}
           <OrderMaterialEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
         </Tabs.Panel>
         {canWorkWithOrder ? (
@@ -660,6 +684,7 @@ export function OrderDetailPage() {
       <OrderQuickAddModal
         order={{ id: o.id, orderNumberFormatted: o.orderNumberFormatted }}
         opened={quickAddOpen}
+        initialTab={quickAddTab}
         onClose={() => setQuickAddOpen(false)}
       />
 

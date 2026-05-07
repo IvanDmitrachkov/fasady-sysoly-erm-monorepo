@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,6 +35,7 @@ type MaterialValues = z.infer<typeof materialSchema>;
 type Props = {
   order: Pick<OrderDto, "id" | "orderNumberFormatted"> | null;
   opened: boolean;
+  initialTab?: "time" | "material";
   onClose: () => void;
 };
 
@@ -52,8 +53,9 @@ const MATERIAL_OPTIONS = [
 ].map((x) => ({ value: x, label: x }));
 const UNIT_OPTIONS = ["шт", "гр.", "кг", "л", "м", "м²", "мл"].map((x) => ({ value: x, label: x }));
 
-export function OrderQuickAddModal({ order, opened, onClose }: Props) {
+export function OrderQuickAddModal({ order, opened, initialTab = "time", onClose }: Props) {
   const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"time" | "material">(initialTab);
   const stages = useQuery({ queryKey: ["stages"], queryFn: stagesList, enabled: opened });
   const stageOptions = useMemo(() => (stages.data?.stages ?? []).map((s) => ({ value: s.id, label: s.name })), [stages.data]);
   const stageOptionsWithEmpty = useMemo(
@@ -103,6 +105,11 @@ export function OrderQuickAddModal({ order, opened, onClose }: Props) {
   });
 
   useEffect(() => {
+    if (!opened) return;
+    setActiveTab(initialTab);
+  }, [opened, initialTab]);
+
+  useEffect(() => {
     if (!opened || stageOptions.length === 0) return;
     let lsStageId: string | null = null;
     try {
@@ -123,7 +130,7 @@ export function OrderQuickAddModal({ order, opened, onClose }: Props) {
   return (
     <Modal opened={opened} onClose={onClose} title={order ? `Добавить в заказ №${order.orderNumberFormatted}` : "Добавить"} size="lg">
       {order ? (
-        <Tabs defaultValue="time">
+        <Tabs value={activeTab} onChange={(value) => setActiveTab((value as "time" | "material") ?? "time")}>
           <Tabs.List>
             <Tabs.Tab value="time">Трудозатрата</Tabs.Tab>
             <Tabs.Tab value="material">Материал</Tabs.Tab>
