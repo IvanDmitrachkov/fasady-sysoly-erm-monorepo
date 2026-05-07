@@ -42,7 +42,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { materialsReport, salesReport, type SalesReportHandleFilter } from "../api/reports";
+import { facadesReport, materialsReport, salesReport, type SalesReportHandleFilter } from "../api/reports";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
 import { money } from "../lib/order-form";
@@ -267,12 +267,45 @@ export function ReportsPage() {
     enabled: isAdmin && reportType === "materials" && !!prevFromIso && !!prevToIso,
   });
 
-  const coatingOptions = (report.data?.filters.coatings ?? []).map((c) => ({
+  const facadesSpendReport = useQuery({
+    queryKey: ["facadesSpendReport", fromIso, toIso, customerId, coatingTypeId, millingLabel, color],
+    queryFn: () =>
+      facadesReport({
+        from: fromIso,
+        to: toIso,
+        ...(customerId ? { customerId } : {}),
+        ...(coatingTypeId ? { coatingTypeId } : {}),
+        ...(millingLabel ? { millingLabel } : {}),
+        ...(color ? { color } : {}),
+      }),
+    enabled: isAdmin && reportType === "facades" && !!fromIso && !!toIso,
+  });
+
+  const previousFacadesSpendReport = useQuery({
+    queryKey: ["facadesSpendReportPrevious", prevFromIso, prevToIso, customerId, coatingTypeId, millingLabel, color],
+    queryFn: () =>
+      facadesReport({
+        from: prevFromIso,
+        to: prevToIso,
+        ...(customerId ? { customerId } : {}),
+        ...(coatingTypeId ? { coatingTypeId } : {}),
+        ...(millingLabel ? { millingLabel } : {}),
+        ...(color ? { color } : {}),
+      }),
+    enabled: isAdmin && reportType === "facades" && !!prevFromIso && !!prevToIso,
+  });
+
+  const coatingFilters = reportType === "facades" ? facadesSpendReport.data?.filters.coatings : report.data?.filters.coatings;
+  const millingFilters =
+    reportType === "facades" ? facadesSpendReport.data?.filters.millingLabels : report.data?.filters.millingLabels;
+  const colorFilters = reportType === "facades" ? facadesSpendReport.data?.filters.colors : report.data?.filters.colors;
+
+  const coatingOptions = (coatingFilters ?? []).map((c) => ({
     value: c.id,
     label: c.name,
   }));
-  const millingOptions = (report.data?.filters.millingLabels ?? []).map((m) => ({ value: m, label: m }));
-  const colorOptions = (report.data?.filters.colors ?? []).map((c) => ({ value: c, label: c }));
+  const millingOptions = (millingFilters ?? []).map((m) => ({ value: m, label: m }));
+  const colorOptions = (colorFilters ?? []).map((c) => ({ value: c, label: c }));
   const customerOptions = (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name }));
   const customerSelectOptions = [{ value: "__all__", label: "Все заказчики" }, ...customerOptions];
   const materialNameOptions = (materialReport.data?.filters.names ?? []).map((x) => ({ value: x, label: x }));
@@ -284,7 +317,7 @@ export function ReportsPage() {
     coatingTypeId ? { key: "coating", label: `Покрытие: ${coatingOptions.find((c) => c.value === coatingTypeId)?.label ?? "Выбрано"}` } : null,
     millingLabel ? { key: "milling", label: `Фрезеровка: ${millingLabel}` } : null,
     color ? { key: "color", label: `Цвет: ${color}` } : null,
-    handle ? { key: "handle", label: `Ручка: ${handle === "with" ? "С ручкой" : "Без ручки"}` } : null,
+    reportType === "sales" && handle ? { key: "handle", label: `Ручка: ${handle === "with" ? "С ручкой" : "Без ручки"}` } : null,
     materialName ? { key: "materialName", label: `Материал: ${materialName}` } : null,
     materialUnit ? { key: "materialUnit", label: `Ед.: ${materialUnit}` } : null,
     materialStageId
@@ -325,6 +358,14 @@ export function ReportsPage() {
       color: CHART_COLORS[idx % CHART_COLORS.length],
     }));
   }, [materialReport.data]);
+
+  const facadesChartData = useMemo(() => {
+    return (facadesSpendReport.data?.byCoating ?? []).slice(0, 8).map((item, idx) => ({
+      name: item.coatingTypeName,
+      areaM2: item.areaM2,
+      color: CHART_COLORS[idx % CHART_COLORS.length],
+    }));
+  }, [facadesSpendReport.data]);
 
   const filteredFacades = useMemo(() => {
     const list = [...(report.data?.facades ?? [])].filter((row) => {
@@ -421,6 +462,20 @@ export function ReportsPage() {
     return list;
   }, [materialReport.data, materialSort, search]);
 
+  const filteredFacadesSpendEntries = useMemo(() => {
+    return [...(facadesSpendReport.data?.facades ?? [])].filter((row) => {
+      if (!search.trim()) return true;
+      const needle = search.toLowerCase().trim();
+      return (
+        row.order.orderNumberFormatted.toLowerCase().includes(needle) ||
+        row.order.customer.name.toLowerCase().includes(needle) ||
+        row.coatingType.name.toLowerCase().includes(needle) ||
+        row.millingLabel.toLowerCase().includes(needle) ||
+        row.color.toLowerCase().includes(needle)
+      );
+    });
+  }, [facadesSpendReport.data, search]);
+
   const setPresetPeriod = (preset: "today" | "week" | "month" | "quarter" | "custom") => {
     setPeriodPreset(preset);
     if (preset === "custom") return;
@@ -500,6 +555,7 @@ export function ReportsPage() {
           data={[
             { value: "sales", label: "Реализация и сумма заказов" },
             { value: "materials", label: "Расход материалов" },
+            { value: "facades", label: "Расход фасадов" },
           ]}
           value={reportType}
           onChange={setReportType}
@@ -616,7 +672,7 @@ export function ReportsPage() {
                     w="100%"
                   />
                 </Group>
-              ) : (
+              ) : reportType === "materials" ? (
                 <Group grow align="flex-start" className="reports-filter-row">
                   <Select
                     label="Материал"
@@ -659,6 +715,39 @@ export function ReportsPage() {
                     w="100%"
                   />
                 </Group>
+              ) : (
+                <Group grow align="flex-start" className="reports-filter-row">
+                  <Select
+                    label="Покрытие"
+                    placeholder="Все"
+                    data={coatingOptions}
+                    value={coatingTypeId}
+                    onChange={setCoatingTypeId}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Фрезеровка"
+                    placeholder="Все"
+                    data={millingOptions}
+                    value={millingLabel}
+                    onChange={setMillingLabel}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                  <Select
+                    label="Цвет"
+                    placeholder="Все"
+                    data={colorOptions}
+                    value={color}
+                    onChange={setColor}
+                    clearable
+                    searchable
+                    w="100%"
+                  />
+                </Group>
               )}
             </Stack>
           </Collapse>
@@ -688,7 +777,8 @@ export function ReportsPage() {
       </Paper>
 
       {(reportType === "sales" && (report.isPending || previousReport.isPending)) ||
-      (reportType === "materials" && (materialReport.isPending || previousMaterialReport.isPending)) ? (
+      (reportType === "materials" && (materialReport.isPending || previousMaterialReport.isPending)) ||
+      (reportType === "facades" && (facadesSpendReport.isPending || previousFacadesSpendReport.isPending)) ? (
         <Text c="dimmed">Загрузка…</Text>
       ) : null}
       {reportType === "sales" && report.isError ? (
@@ -696,6 +786,9 @@ export function ReportsPage() {
       ) : null}
       {reportType === "materials" && materialReport.isError ? (
         <Text c="red">{materialReport.error instanceof Error ? materialReport.error.message : "Ошибка"}</Text>
+      ) : null}
+      {reportType === "facades" && facadesSpendReport.isError ? (
+        <Text c="red">{facadesSpendReport.error instanceof Error ? facadesSpendReport.error.message : "Ошибка"}</Text>
       ) : null}
 
       {reportType === "sales" && report.data ? (
@@ -977,6 +1070,120 @@ export function ReportsPage() {
                   </Table.Tbody>
                 </Table>
               )}
+            </ScrollArea>
+          </Paper>
+        </>
+      ) : null}
+
+      {reportType === "facades" && facadesSpendReport.data ? (
+        <>
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+            <KpiCard
+              title="Заказов в расходе"
+              value={String(facadesSpendReport.data.totals.ordersCount)}
+              delta={kpiDelta(facadesSpendReport.data.totals.ordersCount, previousFacadesSpendReport.data?.totals.ordersCount ?? 0)}
+            />
+            <KpiCard
+              title="Фасадов"
+              value={String(facadesSpendReport.data.totals.facadeCount)}
+              delta={kpiDelta(facadesSpendReport.data.totals.facadeCount, previousFacadesSpendReport.data?.totals.facadeCount ?? 0)}
+            />
+            <KpiCard
+              title="Площадь"
+              value={`${area.format(facadesSpendReport.data.totals.facadeAreaTotal)} м²`}
+              delta={kpiDelta(
+                facadesSpendReport.data.totals.facadeAreaTotal,
+                previousFacadesSpendReport.data?.totals.facadeAreaTotal ?? 0,
+              )}
+            />
+            <KpiCard
+              title="Строк фасадов"
+              value={String(facadesSpendReport.data.totals.linesCount)}
+              delta={kpiDelta(facadesSpendReport.data.totals.linesCount, previousFacadesSpendReport.data?.totals.linesCount ?? 0)}
+            />
+          </SimpleGrid>
+
+          <Paper withBorder p="md" radius="md">
+            <Title order={5}>Топ покрытий по площади</Title>
+            <Text size="sm" c="dimmed" mb="sm">
+              Расход фасадов в м² по покрытиям
+            </Text>
+            <div className="reports-chart-wrap">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={facadesChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <ChartTooltip formatter={(value) => [`${area.format(Number(value))} м²`, "Площадь"]} />
+                  <Bar dataKey="areaM2" radius={[4, 4, 0, 0]}>
+                    {facadesChartData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Paper>
+
+          <Paper withBorder p="md" radius="md">
+            <Group justify="space-between" align="flex-end" mb="sm" wrap="wrap">
+              <Stack gap={2}>
+                <Title order={5}>Детализация фасадов</Title>
+                <Text size="sm" c="dimmed">
+                  Поиск по заказу, заказчику, покрытию и параметрам фасада
+                </Text>
+              </Stack>
+              <TextInput
+                placeholder="Поиск..."
+                value={search}
+                onChange={(e) => setSearch(e.currentTarget.value)}
+                leftSection={<IconSearch size={16} />}
+                w={280}
+              />
+            </Group>
+            <ScrollArea type="auto" offsetScrollbars className="reports-table-scroll">
+              <Table striped highlightOnHover withTableBorder miw={1100} stickyHeader>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Дата реализации</Table.Th>
+                    <Table.Th>Заказ</Table.Th>
+                    <Table.Th>Заказчик</Table.Th>
+                    <Table.Th>Покрытие</Table.Th>
+                    <Table.Th>Фрезеровка</Table.Th>
+                    <Table.Th>Цвет</Table.Th>
+                    <Table.Th>Размер</Table.Th>
+                    <Table.Th>Кол-во</Table.Th>
+                    <Table.Th>Площадь</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {filteredFacadesSpendEntries.length === 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={9}>
+                        <Text size="sm" c="dimmed">
+                          Нет данных по расходу фасадов для текущих условий
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    filteredFacadesSpendEntries.map((row) => (
+                      <Table.Tr key={row.id}>
+                        <Table.Td>{formatDate(row.order.completedAt)}</Table.Td>
+                        <Table.Td>№{row.order.orderNumberFormatted}</Table.Td>
+                        <Table.Td>{row.order.customer.name}</Table.Td>
+                        <Table.Td>{row.coatingType.name}</Table.Td>
+                        <Table.Td>{row.millingLabel}</Table.Td>
+                        <Table.Td>{row.color || "—"}</Table.Td>
+                        <Table.Td>
+                          {row.widthMm}×{row.heightMm}×{row.thicknessMm}
+                        </Table.Td>
+                        <Table.Td>{row.quantity}</Table.Td>
+                        <Table.Td>{area.format(row.areaM2)} м²</Table.Td>
+                      </Table.Tr>
+                    ))
+                  )}
+                </Table.Tbody>
+              </Table>
             </ScrollArea>
           </Paper>
         </>

@@ -135,6 +135,58 @@ export type MaterialsReportDto = {
   }[];
 };
 
+export type FacadesReportParams = {
+  from: string;
+  to: string;
+  customerId?: string;
+  coatingTypeId?: string;
+  millingLabel?: string;
+  color?: string;
+};
+
+export type FacadesReportDto = {
+  totals: {
+    ordersCount: number;
+    facadeCount: number;
+    facadeAreaTotal: number;
+    linesCount: number;
+  };
+  filters: {
+    coatings: { id: string; name: string }[];
+    millingLabels: string[];
+    colors: string[];
+  };
+  byCoating: {
+    coatingTypeId: string;
+    coatingTypeName: string;
+    quantity: number;
+    areaM2: number;
+  }[];
+  byMilling: {
+    millingLabel: string;
+    quantity: number;
+    areaM2: number;
+  }[];
+  facades: {
+    id: string;
+    order: {
+      id: string;
+      orderNumber: number;
+      orderNumberFormatted: string;
+      completedAt: string | null;
+      customer: { id: string; name: string };
+    };
+    coatingType: { id: string; name: string };
+    millingLabel: string;
+    color: string;
+    widthMm: number;
+    heightMm: number;
+    thicknessMm: number;
+    quantity: number;
+    areaM2: number;
+  }[];
+};
+
 export function salesReport(params: SalesReportParams) {
   const q = new URLSearchParams();
   q.set("from", params.from);
@@ -164,4 +216,15 @@ export function materialsReport(params: MaterialsReportParams) {
   if (params.name) q.set("name", params.name);
   if (params.unit) q.set("unit", params.unit);
   return apiJson<MaterialsReportDto>(`/api/reports/materials?${q.toString()}`);
+}
+
+export function facadesReport(params: FacadesReportParams) {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.customerId) q.set("customerId", params.customerId);
+  if (params.coatingTypeId) q.set("coatingTypeId", params.coatingTypeId);
+  if (params.millingLabel) q.set("millingLabel", params.millingLabel);
+  if (params.color) q.set("color", params.color);
+  return apiJson<FacadesReportDto>(`/api/reports/facades?${q.toString()}`);
 }

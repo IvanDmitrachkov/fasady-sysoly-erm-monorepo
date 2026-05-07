@@ -29,6 +29,15 @@ const materialsReportQuery = z.object({
   unit: z.string().optional(),
 });
 
+const facadesReportQuery = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+  customerId: z.string().uuid().optional(),
+  coatingTypeId: z.string().uuid().optional(),
+  millingLabel: z.string().optional(),
+  color: z.string().optional(),
+});
+
 function facadeAreaM2(f: { widthMm: number; heightMm: number; quantity?: number | null }): number {
   const quantity = f.quantity && f.quantity > 0 ? f.quantity : 1;
   return ((f.widthMm * f.heightMm) / 1_000_000) * quantity;
@@ -221,6 +230,126 @@ export const reportsRoutes: FastifyPluginAsync = async (app) => {
         },
         daily: [...dailyMap.values()],
         stageBreakdown: [...stageMap.values()].sort((a, b) => b.minutes - a.minutes),
+      };
+    },
+  );
+
+  app.get(
+    "/reports/facades",
+    { preHandler: [requireRoles(Role.ADMIN)] },
+    async (request, reply) => {
+      const q = facadesReportQuery.safeParse(request.query);
+      if (!q.success) {
+        return reply.code(400).send({ error: "Некорректные параметры", details: q.error.flatten() });
+      }
+
+      const from = new Date(q.data.from);
+      const to = new Date(q.data.to);
+      if (from > to) {
+        return reply.code(400).send({ error: "Начало периода позже конца" });
+      }
+
+      const baseOrderWhere: Prisma.OrderWhereInput = {
+        deletedAt: null,
+        completedAt: { gte: from, lte: to },
+        ...(q.data.customerId ? { customerId: q.data.customerId } : {}),
+      };
+
+      const where: Prisma.FacadeWhereInput = {
+        order: { is: baseOrderWhere },
+        ...(q.data.coatingTypeId ? { coatingTypeId: q.data.coatingTypeId } : {}),
+        ...(q.data.millingLabel?.trim() ? { millingLabel: q.data.millingLabel.trim() } : {}),
+        ...(q.data.color?.trim() ? { color: q.data.color.trim() } : {}),
+      };
+
+      const [facades, filterFacades] = await Promise.all([
+        app.prisma.facade.findMany({
+          where,
+          include: {
+            coatingType: true,
+            order: { include: { customer: true } },
+          },
+          orderBy: [{ order: { completedAt: "desc" } }, { sortIndex: "asc" }],
+        }),
+        app.prisma.facade.findMany({
+          where: { order: { is: baseOrderWhere } },
+          include: { coatingType: true },
+        }),
+      ]);
+
+      const uniqueOrders = new Set<string>();
+      const coatingBreakdown = new Map<string, { coatingTypeId: string; coatingTypeName: string; quantity: number; areaM2: number }>();
+      const millingBreakdown = new Map<string, { millingLabel: string; quantity: number; areaM2: number }>();
+
+      for (const f of facades) {
+        uniqueOrders.add(f.orderId);
+        const qty = f.quantity && f.quantity > 0 ? f.quantity : 1;
+        const areaM2 = facadeAreaM2(f);
+
+        const byCoating = coatingBreakdown.get(f.coatingTypeId);
+        if (byCoating) {
+          byCoating.quantity += qty;
+          byCoating.areaM2 += areaM2;
+        } else {
+          coatingBreakdown.set(f.coatingTypeId, {
+            coatingTypeId: f.coatingTypeId,
+            coatingTypeName: f.coatingType.name,
+            quantity: qty,
+            areaM2,
+          });
+        }
+
+        const millingKey = f.millingLabel.trim() || "Без фрезеровки";
+        const byMilling = millingBreakdown.get(millingKey);
+        if (byMilling) {
+          byMilling.quantity += qty;
+          byMilling.areaM2 += areaM2;
+        } else {
+          millingBreakdown.set(millingKey, { millingLabel: millingKey, quantity: qty, areaM2 });
+        }
+      }
+
+      const coatingMap = new Map<string, { id: string; name: string }>();
+      const millingLabels = new Set<string>();
+      const colors = new Set<string>();
+      for (const facade of filterFacades) {
+        coatingMap.set(facade.coatingType.id, { id: facade.coatingType.id, name: facade.coatingType.name });
+        if (facade.millingLabel.trim()) millingLabels.add(facade.millingLabel);
+        if (facade.color.trim()) colors.add(facade.color);
+      }
+
+      return {
+        totals: {
+          ordersCount: uniqueOrders.size,
+          facadeCount: facades.reduce((sum, f) => sum + (f.quantity && f.quantity > 0 ? f.quantity : 1), 0),
+          facadeAreaTotal: facades.reduce((sum, f) => sum + facadeAreaM2(f), 0),
+          linesCount: facades.length,
+        },
+        filters: {
+          coatings: [...coatingMap.values()].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+          millingLabels: [...millingLabels].sort((a, b) => a.localeCompare(b, "ru")),
+          colors: [...colors].sort((a, b) => a.localeCompare(b, "ru")),
+        },
+        byCoating: [...coatingBreakdown.values()].sort((a, b) => b.areaM2 - a.areaM2),
+        byMilling: [...millingBreakdown.values()].sort((a, b) => b.areaM2 - a.areaM2),
+        facades: facades.map((f) => ({
+          id: f.id,
+          order: {
+            id: f.order.id,
+            orderNumber: f.order.orderNumber,
+            orderNumberFormatted: formatOrderNumber(f.order.orderNumber),
+            completedAt: f.order.completedAt?.toISOString() ?? null,
+            customer: { id: f.order.customer.id, name: f.order.customer.name },
+          },
+          coatingType: { id: f.coatingType.id, name: f.coatingType.name },
+          millingLabel: f.millingLabel,
+          color: f.color,
+          widthMm: f.widthMm,
+          heightMm: f.heightMm,
+          thicknessMm: f.thicknessMm,
+          quantity: f.quantity,
+          areaM2: facadeAreaM2(f),
+        })),
       };
     },
   );
