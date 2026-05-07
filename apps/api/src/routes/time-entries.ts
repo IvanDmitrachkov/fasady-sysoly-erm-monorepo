@@ -57,6 +57,18 @@ function formatDateRuShort(d: Date | null | undefined): string {
   return d.toISOString().slice(0, 10);
 }
 
+function fileToken(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_\-.а-яА-Я]/g, "")
+    .slice(0, 80);
+}
+
+function exportedAtToken(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function serializeEntry(e: {
   id: string;
   minutes: number;
@@ -261,9 +273,15 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
       header.font = { bold: true };
 
       const buf = await wb.xlsx.writeBuffer();
+      const userToken = fileToken(displayName || targetUserId);
+      const fromToken = from.toISOString().slice(0, 10);
+      const toToken = to.toISOString().slice(0, 10);
       return reply
         .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        .header("Content-Disposition", `attachment; filename="tabel_${targetUserId}_${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}.xlsx"`)
+        .header(
+          "Content-Disposition",
+          `attachment; filename="tabel_${userToken}_${fromToken}_${toToken}_ot_${exportedAtToken()}.xlsx"`,
+        )
         .send(Buffer.from(buf));
     },
   );
@@ -485,9 +503,10 @@ export const timeEntriesRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const buf = await wb.xlsx.writeBuffer();
+      const orderToken = fileToken(formatOrderNumber(order.orderNumber));
       return reply
         .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        .header("Content-Disposition", `attachment; filename="naryad_zakaza_${formatOrderNumber(order.orderNumber).replace(/\\s/g, "_")}.xlsx"`)
+        .header("Content-Disposition", `attachment; filename="naryad_zakaza_${orderToken}_ot_${exportedAtToken()}.xlsx"`)
         .send(Buffer.from(buf));
     },
   );

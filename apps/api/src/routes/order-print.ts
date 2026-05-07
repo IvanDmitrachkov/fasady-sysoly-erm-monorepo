@@ -23,9 +23,10 @@ export const orderPrintRoutes: FastifyPluginAsync = async (app) => {
       try {
         const buf = await buildOrderPrintXlsxBuffer(order);
         const safe = formatOrderNumber(order.orderNumber).replace(/\s/g, "_");
+        const exportedAt = new Date().toISOString().slice(0, 10);
         return reply
           .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-          .header("Content-Disposition", `attachment; filename="zakaz_${safe}.xlsx"`)
+          .header("Content-Disposition", `attachment; filename="zakaz_${safe}_ot_${exportedAt}.xlsx"`)
           .send(buf);
       } catch (e) {
         request.log.error(e);

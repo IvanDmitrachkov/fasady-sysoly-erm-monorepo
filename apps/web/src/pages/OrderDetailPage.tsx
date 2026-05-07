@@ -346,8 +346,9 @@ export function OrderDetailPage() {
                       const blob = await apiBlob(orderPrintXlsxPath(orderId!));
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
+                      const exportedAt = dayjs().format("YYYY-MM-DD");
                       a.href = url;
-                      a.download = `zakaz_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
+                      a.download = `zakaz_${o.orderNumberFormatted.replace(/\s/g, "_")}_ot_${exportedAt}.xlsx`;
                       a.click();
                       URL.revokeObjectURL(url);
                     }}
@@ -362,8 +363,9 @@ export function OrderDetailPage() {
                       const blob = await apiBlob(orderTimeEntriesXlsxPath(orderId!));
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
+                      const exportedAt = dayjs().format("YYYY-MM-DD");
                       a.href = url;
-                      a.download = `tabel_${o.orderNumberFormatted.replace(/\s/g, "_")}.xlsx`;
+                      a.download = `naryad_${o.orderNumberFormatted.replace(/\s/g, "_")}_ot_${exportedAt}.xlsx`;
                       a.click();
                       URL.revokeObjectURL(url);
                     }}

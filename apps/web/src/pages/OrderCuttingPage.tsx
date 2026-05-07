@@ -102,8 +102,9 @@ export function OrderCuttingPage() {
               const blob = await apiBlob(orderPrintXlsxPath(orderId));
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
+              const exportedAt = new Date().toISOString().slice(0, 10);
               a.href = url;
-              a.download = `zakaz_${plan.data?.orderNumberFormatted?.replace(/\s/g, "_") ?? orderId}.xlsx`;
+              a.download = `zakaz_${plan.data?.orderNumberFormatted?.replace(/\s/g, "_") ?? orderId}_ot_${exportedAt}.xlsx`;
               a.click();
               URL.revokeObjectURL(url);
             }}
