@@ -55,6 +55,7 @@ import { stagesList } from "../api/stages";
 import { OrderFormBody } from "../components/OrderFormBody";
 import { OrderCommentsSection } from "../components/OrderCommentsSection";
 import { OrderMaterialEntriesSection } from "../components/OrderMaterialEntriesSection";
+import { OrderQuickAddModal } from "../components/OrderQuickAddModal";
 import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import {
   buildOrderWritePayload,
@@ -111,6 +112,7 @@ export function OrderDetailPage() {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [moveStageId, setMoveStageId] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
@@ -357,6 +359,11 @@ export function OrderDetailPage() {
                     Редактировать
                   </Button>
               ) : null}
+              {canWorkWithOrder ? (
+                <Button size="sm" variant="light" onClick={() => setQuickAddOpen(true)}>
+                  Добавить запись
+                </Button>
+              ) : null}
               {isAdmin ? (
                 <Button
                   color="red"
@@ -589,8 +596,8 @@ export function OrderDetailPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="time">
-          <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
-          <OrderMaterialEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} />
+          <OrderTimeEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
+          <OrderMaterialEntriesSection orderId={orderId!} canEdit={canWorkWithOrder} showCreateForm={false} />
         </Tabs.Panel>
         {canWorkWithOrder ? (
           <Tabs.Panel value="comments">
@@ -624,6 +631,12 @@ export function OrderDetailPage() {
           </Group>
         </Stack>
       </Modal>
+
+      <OrderQuickAddModal
+        order={{ id: o.id, orderNumberFormatted: o.orderNumberFormatted }}
+        opened={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+      />
 
       <Modal
         opened={editOpen}

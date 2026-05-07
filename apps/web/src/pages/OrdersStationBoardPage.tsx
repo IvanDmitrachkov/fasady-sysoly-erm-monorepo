@@ -12,6 +12,7 @@ import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 import { OrderKanbanCard } from "../components/OrderKanbanCard";
+import { OrderQuickAddModal } from "../components/OrderQuickAddModal";
 import "./OrdersKanban.css";
 
 const STATION_STAGE_LS_KEY = "erm_station_board_stage_id";
@@ -59,6 +60,7 @@ export function OrdersStationBoardPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [previewOrder, setPreviewOrder] = useState<OrderDto | null>(null);
+  const [quickAddOrder, setQuickAddOrder] = useState<OrderDto | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const isCustomer = me.data?.user.role === "CUSTOMER";
@@ -441,6 +443,16 @@ export function OrdersStationBoardPage() {
             ) : null}
 
             <Group justify="flex-end">
+              {canMove ? (
+                <Button
+                  variant="light"
+                  onClick={() => {
+                    setQuickAddOrder(previewOrder);
+                  }}
+                >
+                  Добавить запись
+                </Button>
+              ) : null}
               <Button variant="default" onClick={() => setPreviewOrder(null)}>
                 Закрыть
               </Button>
@@ -458,6 +470,11 @@ export function OrdersStationBoardPage() {
           </Stack>
         ) : null}
       </Modal>
+      <OrderQuickAddModal
+        order={quickAddOrder ? { id: quickAddOrder.id, orderNumberFormatted: quickAddOrder.orderNumberFormatted } : null}
+        opened={!!quickAddOrder}
+        onClose={() => setQuickAddOrder(null)}
+      />
     </>
   );
 }

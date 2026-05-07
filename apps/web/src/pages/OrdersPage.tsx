@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
 import { Link } from "react-router-dom";
@@ -8,11 +8,13 @@ import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { money } from "../lib/order-form";
 import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
+import { OrderQuickAddModal } from "../components/OrderQuickAddModal";
 import dayjs from "dayjs";
 import "./OrdersPage.css";
 
 export function OrdersPage() {
   const qc = useQueryClient();
+  const [quickAddOrder, setQuickAddOrder] = useState<OrderDto | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const canMoveOrder = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
@@ -158,6 +160,11 @@ export function OrdersPage() {
           <Text size="xs" c="dimmed" lineClamp={2}>
             {o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}
           </Text>
+          {canMoveOrder ? (
+            <Button size="xs" variant="light" mt={6} onClick={() => setQuickAddOrder(o)}>
+              + Запись
+            </Button>
+          ) : null}
         </Table.Td>
       </Table.Tr>
     );
@@ -243,6 +250,11 @@ export function OrdersPage() {
               {o.deliveryAddress?.trim() ? o.deliveryAddress : "—"}
             </Text>
           </div>
+          {canMoveOrder ? (
+            <Button size="xs" variant="light" onClick={() => setQuickAddOrder(o)}>
+              + Запись
+            </Button>
+          ) : null}
         </Stack>
       </Paper>
     );
@@ -295,6 +307,11 @@ export function OrdersPage() {
           {moveMut.error instanceof Error ? moveMut.error.message : "Ошибка перемещения"}
         </Text>
       ) : null}
+      <OrderQuickAddModal
+        order={quickAddOrder ? { id: quickAddOrder.id, orderNumberFormatted: quickAddOrder.orderNumberFormatted } : null}
+        opened={!!quickAddOrder}
+        onClose={() => setQuickAddOrder(null)}
+      />
     </>
   );
 }

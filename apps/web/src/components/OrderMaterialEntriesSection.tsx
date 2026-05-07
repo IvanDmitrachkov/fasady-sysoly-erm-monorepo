@@ -20,9 +20,9 @@ const formSchema = z.object({
 });
 type FormValues = z.infer<typeof formSchema>;
 
-type Props = { orderId: string; canEdit: boolean };
+type Props = { orderId: string; canEdit: boolean; showCreateForm?: boolean };
 
-export function OrderMaterialEntriesSection({ orderId, canEdit }: Props) {
+export function OrderMaterialEntriesSection({ orderId, canEdit, showCreateForm = true }: Props) {
   const qc = useQueryClient();
   const materials = useQuery({
     queryKey: ["materialEntries", orderId],
@@ -146,7 +146,7 @@ export function OrderMaterialEntriesSection({ orderId, canEdit }: Props) {
         </Table>
       ) : null}
 
-      {canEdit ? (
+      {canEdit && showCreateForm ? (
         <>
           <Divider label="Новая запись" labelPosition="left" mb="md" />
           <form
