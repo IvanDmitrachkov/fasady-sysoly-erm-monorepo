@@ -64,6 +64,7 @@ import {
   createOrderFormSchema,
   defaultsForNewFacadeRow,
   defaultFacadeRow,
+  formatDecimalRu,
   money,
   orderDtoToFormValues,
   type CreateOrderFormValues,
@@ -452,7 +453,7 @@ export function OrderDetailPage() {
             Фасады
           </Text>
           <Text fw={500}>
-            {o.facadeCount} шт. · {o.facadeAreaTotal} м²
+            {o.facadeCount} шт. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
           </Text>
         </Paper>
         <Paper withBorder p="md" radius="md">
@@ -538,7 +539,7 @@ export function OrderDetailPage() {
             <Group justify="space-between" mb="sm">
               <Title order={4}>Фасады</Title>
               <Text size="sm" c="dimmed">
-                {o.facadeCount} шт. · {o.facadeAreaTotal} м²
+                {o.facadeCount} шт. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
               </Text>
             </Group>
             <ScrollArea type="auto" offsetScrollbars>

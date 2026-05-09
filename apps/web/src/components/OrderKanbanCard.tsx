@@ -1,7 +1,8 @@
 import { Badge, Group, Paper, Stack, Text } from "@mantine/core";
 import dayjs from "dayjs";
-import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import type { OrderDto } from "../api/orders";
+import { formatDecimalRu } from "../lib/order-form";
+import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import "./OrderKanbanCard.css";
 
 function kanbanAccentColor(slug: string | null | undefined): string {
@@ -75,7 +76,7 @@ export function OrderKanbanCard({
 
         <Stack gap={6}>
           <MetaRow label="Дедлайн" value={order.deadlineAt ? dayjs(order.deadlineAt).format("D MMM YYYY") : "Не указан"} />
-          <MetaRow label="Площадь" value={`${order.facadeAreaTotal} м2`} />
+          <MetaRow label="Площадь" value={`${formatDecimalRu.format(order.facadeAreaTotal)} м²`} />
         </Stack>
       </Stack>
     </Paper>

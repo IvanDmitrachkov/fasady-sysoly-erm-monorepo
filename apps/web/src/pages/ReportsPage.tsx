@@ -45,13 +45,8 @@ import {
 import { facadesReport, materialsReport, salesReport, type SalesReportHandleFilter } from "../api/reports";
 import { meRequest } from "../api/auth";
 import { customersList } from "../api/customers";
-import { money } from "../lib/order-form";
+import { formatDecimalRu, money } from "../lib/order-form";
 import "./ReportsPage.css";
-
-const area = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 const CHART_COLORS = ["#4c6ef5", "#12b886", "#f59f00", "#e64980", "#7950f2", "#228be6", "#fa5252"];
 
@@ -806,7 +801,7 @@ export function ReportsPage() {
             />
             <KpiCard
               title="Площадь"
-              value={`${area.format(report.data.totals.facadeAreaTotal)} м²`}
+              value={`${formatDecimalRu.format(report.data.totals.facadeAreaTotal)} м²`}
               delta={kpiDelta(report.data.totals.facadeAreaTotal, previousReport.data?.totals.facadeAreaTotal ?? 0)}
             />
             <KpiCard
@@ -986,7 +981,7 @@ export function ReportsPage() {
                           <Table.Td>
                             {facade.widthMm}×{facade.heightMm}×{facade.thicknessMm}
                           </Table.Td>
-                          <Table.Td>{area.format(facade.areaM2)} м²</Table.Td>
+                          <Table.Td>{formatDecimalRu.format(facade.areaM2)} м²</Table.Td>
                         </Table.Tr>
                       ))
                     )}
@@ -1062,7 +1057,7 @@ export function ReportsPage() {
                           <Table.Td>{formatDate(row.completedAt)}</Table.Td>
                           <Table.Td>{row.customer.name}</Table.Td>
                           <Table.Td>{row.facadeCount}</Table.Td>
-                          <Table.Td>{area.format(row.facadeAreaTotal)} м²</Table.Td>
+                          <Table.Td>{formatDecimalRu.format(row.facadeAreaTotal)} м²</Table.Td>
                           <Table.Td>{row.totalCost != null ? money.format(row.totalCost) : "—"}</Table.Td>
                         </Table.Tr>
                       ))
@@ -1090,7 +1085,7 @@ export function ReportsPage() {
             />
             <KpiCard
               title="Площадь"
-              value={`${area.format(facadesSpendReport.data.totals.facadeAreaTotal)} м²`}
+              value={`${formatDecimalRu.format(facadesSpendReport.data.totals.facadeAreaTotal)} м²`}
               delta={kpiDelta(
                 facadesSpendReport.data.totals.facadeAreaTotal,
                 previousFacadesSpendReport.data?.totals.facadeAreaTotal ?? 0,
@@ -1114,7 +1109,7 @@ export function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <ChartTooltip formatter={(value) => [`${area.format(Number(value))} м²`, "Площадь"]} />
+                  <ChartTooltip formatter={(value) => [`${formatDecimalRu.format(Number(value))} м²`, "Площадь"]} />
                   <Bar dataKey="areaM2" radius={[4, 4, 0, 0]}>
                     {facadesChartData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
@@ -1178,7 +1173,7 @@ export function ReportsPage() {
                           {row.widthMm}×{row.heightMm}×{row.thicknessMm}
                         </Table.Td>
                         <Table.Td>{row.quantity}</Table.Td>
-                        <Table.Td>{area.format(row.areaM2)} м²</Table.Td>
+                        <Table.Td>{formatDecimalRu.format(row.areaM2)} м²</Table.Td>
                       </Table.Tr>
                     ))
                   )}
@@ -1199,7 +1194,7 @@ export function ReportsPage() {
             />
             <KpiCard
               title="Общий расход"
-              value={area.format(materialReport.data.totals.totalQuantity)}
+              value={formatDecimalRu.format(materialReport.data.totals.totalQuantity)}
               delta={kpiDelta(materialReport.data.totals.totalQuantity, previousMaterialReport.data?.totals.totalQuantity ?? 0)}
             />
             <KpiCard
@@ -1228,7 +1223,7 @@ export function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <ChartTooltip formatter={(value) => [area.format(Number(value)), "Количество"]} />
+                  <ChartTooltip formatter={(value) => [formatDecimalRu.format(Number(value)), "Количество"]} />
                   <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
                     {materialChartData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
@@ -1346,7 +1341,7 @@ export function ReportsPage() {
                           <Table.Td>{row.order.customer.name}</Table.Td>
                           <Table.Td>{row.name}</Table.Td>
                           <Table.Td>{row.kind || "—"}</Table.Td>
-                          <Table.Td>{area.format(row.quantity)}</Table.Td>
+                          <Table.Td>{formatDecimalRu.format(row.quantity)}</Table.Td>
                           <Table.Td>{row.unit}</Table.Td>
                           <Table.Td>{row.stage?.name ?? "—"}</Table.Td>
                           <Table.Td>{userName || row.user.email}</Table.Td>

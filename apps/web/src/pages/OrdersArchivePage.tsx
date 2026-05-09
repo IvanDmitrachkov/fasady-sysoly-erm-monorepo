@@ -3,7 +3,7 @@ import { Badge, Button, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, Text
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { ordersList } from "../api/orders";
-import { money } from "../lib/order-form";
+import { formatDecimalRu, money } from "../lib/order-form";
 import { orderWorkStateBadgeColor } from "../lib/order-work-state-ui";
 import "./OrdersArchivePage.css";
 
@@ -52,7 +52,7 @@ export function OrdersArchivePage() {
         <Table.Td>
           <Text size="sm">{o.facadeCount} шт.</Text>
           <Text size="xs" c="dimmed">
-            {o.facades.length} поз. · {o.facadeAreaTotal} м²
+            {o.facades.length} поз. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
           </Text>
         </Table.Td>
         <Table.Td>
@@ -126,7 +126,7 @@ export function OrdersArchivePage() {
               </Text>
               <Text size="sm">{o.facadeCount} шт.</Text>
               <Text size="xs" c="dimmed">
-                {o.facades.length} поз. · {o.facadeAreaTotal} м²
+                {o.facades.length} поз. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
               </Text>
             </div>
             <div className="orders-archive-card-cell">

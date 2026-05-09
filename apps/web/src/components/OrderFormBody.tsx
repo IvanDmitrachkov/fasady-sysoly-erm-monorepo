@@ -18,7 +18,7 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import { useMemo } from "react";
 import type { CreateOrderFormValues } from "../lib/order-form";
-import { defaultFacadeRow, isNoHandleLabel, money } from "../lib/order-form";
+import { defaultFacadeRow, formatDecimalRu, isNoHandleLabel, money } from "../lib/order-form";
 import {
   calcFacadeAreaTotal,
   calcFacadeCount,
@@ -247,7 +247,7 @@ export function OrderFormBody({
           </div>
           <div>
             <Text size="sm">Общая площадь</Text>
-            <Text fw={600}>{pricing.area} м²</Text>
+            <Text fw={600}>{formatDecimalRu.format(pricing.area)} м²</Text>
           </div>
         </Group>
       </Paper>

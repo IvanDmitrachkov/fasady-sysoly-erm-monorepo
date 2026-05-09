@@ -17,6 +17,11 @@ export const money = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
 
+/** Площадь, количества и другие расчётные десятичные — не более 2 знаков после запятой. */
+export const formatDecimalRu = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 2,
+});
+
 export const NO_HANDLE_LABEL = "Нет";
 
 export function isNoHandleLabel(value: string | null | undefined): boolean {

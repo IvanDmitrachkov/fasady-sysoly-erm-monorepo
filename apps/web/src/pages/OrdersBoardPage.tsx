@@ -9,7 +9,7 @@ import { orderGet, orderMove, ordersList, orderSetWorkState, type OrderDto } fro
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
-import { money } from "../lib/order-form";
+import { formatDecimalRu, money } from "../lib/order-form";
 import dayjs from "dayjs";
 import { OrderKanbanCard } from "../components/OrderKanbanCard";
 import { OrderCommentsSection } from "../components/OrderCommentsSection";
@@ -348,7 +348,7 @@ export function OrdersBoardPage() {
                       <PreviewField
                         icon={<IconPackage size={16} />}
                         label="Фасады"
-                        value={`${previewData.facadeCount} шт. · ${previewData.facadeAreaTotal} м²`}
+                        value={`${previewData.facadeCount} шт. · ${formatDecimalRu.format(previewData.facadeAreaTotal)} м²`}
                       />
                       <PreviewField
                         icon={<IconCash size={16} />}

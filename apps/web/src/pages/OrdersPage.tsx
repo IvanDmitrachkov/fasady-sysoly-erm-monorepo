@@ -6,7 +6,7 @@ import { meRequest } from "../api/auth";
 import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
-import { money } from "../lib/order-form";
+import { formatDecimalRu, money } from "../lib/order-form";
 import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import { OrderQuickAddModal } from "../components/OrderQuickAddModal";
 import dayjs from "dayjs";
@@ -144,7 +144,7 @@ export function OrdersPage() {
         <Table.Td>
           <Text size="sm">{o.facadeCount} шт.</Text>
           <Text size="xs" c="dimmed">
-            {o.facades.length} поз. · {o.facadeAreaTotal} м²
+            {o.facades.length} поз. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
           </Text>
         </Table.Td>
         <Table.Td>
@@ -220,7 +220,7 @@ export function OrdersPage() {
               </Text>
               <Text size="sm">{o.facadeCount} шт.</Text>
               <Text size="xs" c="dimmed">
-                {o.facades.length} поз. · {o.facadeAreaTotal} м²
+                {o.facades.length} поз. · {formatDecimalRu.format(o.facadeAreaTotal)} м²
               </Text>
             </div>
             <div className="orders-mobile-card-cell">

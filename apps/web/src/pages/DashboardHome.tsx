@@ -34,15 +34,10 @@ import {
 } from "recharts";
 import { dashboardReport } from "../api/reports";
 import { meRequest } from "../api/auth";
-import { money } from "../lib/order-form";
+import { formatDecimalRu, money } from "../lib/order-form";
 import "./DashboardHome.css";
 
 type DashboardPeriod = "today" | "week" | "month";
-
-const areaFormat = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 const CHART_COLORS = ["#4c6ef5", "#12b886", "#f59f00", "#e64980", "#7950f2", "#228be6", "#fa5252"];
 
@@ -184,7 +179,7 @@ export function DashboardHome() {
                 {dashboardQ.data.kpis.facadeCount.value}
               </Text>
               <Text size="sm" c="dimmed" mt={4}>
-                Площадь: {areaFormat.format(dashboardQ.data.kpis.areaM2.value)} м²
+                Площадь: {formatDecimalRu.format(dashboardQ.data.kpis.areaM2.value)} м²
               </Text>
             </Paper>
 
