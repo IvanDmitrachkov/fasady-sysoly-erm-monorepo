@@ -1,18 +1,21 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Divider, Group, Modal, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Badge, Button, Group, Modal, Paper, ScrollArea, Select, SimpleGrid, Stack, Table, Tabs, Text, Title } from "@mantine/core";
 import { IconCalendarDue, IconCash, IconExternalLink, IconPackage, IconUser } from "@tabler/icons-react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { useNavigate } from "react-router-dom";
 import { meRequest } from "../api/auth";
-import { orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
+import { orderGet, orderMove, ordersList, orderSetWorkState, type OrderDto } from "../api/orders";
 import { orderWorkStatesList } from "../api/order-work-states";
 import { stagesList } from "../api/stages";
 import { orderWorkStateBadgeColor, orderWorkStateOptionTextColor, orderWorkStateSelectStyles } from "../lib/order-work-state-ui";
 import { money } from "../lib/order-form";
 import dayjs from "dayjs";
 import { OrderKanbanCard } from "../components/OrderKanbanCard";
+import { OrderCommentsSection } from "../components/OrderCommentsSection";
+import { OrderMaterialEntriesSection } from "../components/OrderMaterialEntriesSection";
 import { OrderQuickAddModal } from "../components/OrderQuickAddModal";
+import { OrderTimeEntriesSection } from "../components/OrderTimeEntriesSection";
 import "./OrdersKanban.css";
 
 type OrdersListData = Awaited<ReturnType<typeof ordersList>>;
@@ -51,6 +54,7 @@ export function OrdersBoardPage() {
   const navigate = useNavigate();
   const [previewOrder, setPreviewOrder] = useState<OrderDto | null>(null);
   const [quickAddOrder, setQuickAddOrder] = useState<OrderDto | null>(null);
+  const [quickAddTab, setQuickAddTab] = useState<"time" | "material">("time");
   const me = useQuery({ queryKey: ["me"], queryFn: meRequest });
   const canMove = me.data?.user.role === "ADMIN" || me.data?.user.role === "WORKER";
 
@@ -155,6 +159,12 @@ export function OrdersBoardPage() {
 
     moveMut.mutate({ id: draggableId, stageId: destination.droppableId, previous });
   };
+  const previewOrderDetails = useQuery({
+    queryKey: ["order", previewOrder?.id],
+    queryFn: () => orderGet(previewOrder!.id),
+    enabled: !!previewOrder?.id,
+  });
+  const previewData = previewOrderDetails.data?.order ?? previewOrder;
 
   const columns =
     stages.data?.stages.map((stage) => {
@@ -295,7 +305,8 @@ export function OrdersBoardPage() {
         opened={!!previewOrder}
         onClose={() => setPreviewOrder(null)}
         title={previewOrder ? `Заказ №${previewOrder.orderNumberFormatted}` : "Заказ"}
-        size="lg"
+        size="90vw"
+        styles={{ content: { maxWidth: 1200 } }}
       >
         {previewOrder ? (
           <Stack gap="md">
@@ -316,65 +327,169 @@ export function OrdersBoardPage() {
               </Group>
             </Group>
 
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <PreviewField
-                icon={<IconCalendarDue size={16} />}
-                label="Дедлайн"
-                value={previewOrder.deadlineAt ? dayjs(previewOrder.deadlineAt).format("D MMMM YYYY") : "—"}
-              />
-              <PreviewField
-                icon={<IconPackage size={16} />}
-                label="Фасады"
-                value={`${previewOrder.facadeCount} шт. · ${previewOrder.facadeAreaTotal} м²`}
-              />
-              <PreviewField
-                icon={<IconCash size={16} />}
-                label="Стоимость"
-                value={previewOrder.totalCost != null ? money.format(previewOrder.totalCost) : "—"}
-              />
-              <PreviewField
-                icon={<IconUser size={16} />}
-                label="Вид работы"
-                value={previewOrder.workType?.trim() ? previewOrder.workType : "—"}
-              />
-            </SimpleGrid>
-
-            {previewOrder.deliveryAddress?.trim() ? (
-              <Stack gap={4}>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                  Доставка
-                </Text>
-                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                  {previewOrder.deliveryAddress}
-                </Text>
-              </Stack>
-            ) : null}
-
-            {previewOrder.comment?.trim() ? (
-              <>
-                <Divider />
-                <Stack gap={4}>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                    Комментарий
-                  </Text>
-                  <Text size="sm" lineClamp={4} style={{ whiteSpace: "pre-wrap" }}>
-                    {previewOrder.comment}
-                  </Text>
-                </Stack>
-              </>
-            ) : null}
+            <Tabs defaultValue="overview">
+              <Tabs.List>
+                <Tabs.Tab value="overview">Обзор</Tabs.Tab>
+                <Tabs.Tab value="finance">Финансы</Tabs.Tab>
+                <Tabs.Tab value="comments">Комментарии</Tabs.Tab>
+                <Tabs.Tab value="facades">Фасады</Tabs.Tab>
+                <Tabs.Tab value="time">Трудозатраты</Tabs.Tab>
+                <Tabs.Tab value="materials">Материалы</Tabs.Tab>
+              </Tabs.List>
+              <Tabs.Panel value="overview" pt="md">
+                {previewData ? (
+                  <Stack gap="md">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                      <PreviewField
+                        icon={<IconCalendarDue size={16} />}
+                        label="Дедлайн"
+                        value={previewData.deadlineAt ? dayjs(previewData.deadlineAt).format("D MMMM YYYY") : "—"}
+                      />
+                      <PreviewField
+                        icon={<IconPackage size={16} />}
+                        label="Фасады"
+                        value={`${previewData.facadeCount} шт. · ${previewData.facadeAreaTotal} м²`}
+                      />
+                      <PreviewField
+                        icon={<IconCash size={16} />}
+                        label="Стоимость"
+                        value={previewData.totalCost != null ? money.format(previewData.totalCost) : "—"}
+                      />
+                      <PreviewField
+                        icon={<IconUser size={16} />}
+                        label="Вид работы"
+                        value={previewData.workType?.trim() ? previewData.workType : "—"}
+                      />
+                    </SimpleGrid>
+                    <PreviewField
+                      icon={<IconUser size={16} />}
+                      label="Доставка"
+                      value={previewData.deliveryAddress?.trim() ? previewData.deliveryAddress : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconUser size={16} />}
+                      label="Комментарий к заказу"
+                      value={previewData.comment?.trim() ? previewData.comment : "—"}
+                    />
+                  </Stack>
+                ) : null}
+              </Tabs.Panel>
+              <Tabs.Panel value="finance" pt="md">
+                {previewData ? (
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Стоимость фасадов"
+                      value={previewData.facadeCostTotal != null ? money.format(previewData.facadeCostTotal) : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Стоимость фрезеровки"
+                      value={previewData.millingCostTotal != null ? money.format(previewData.millingCostTotal) : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Стоимость ручек"
+                      value={previewData.handleCostTotal != null ? money.format(previewData.handleCostTotal) : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Прочие услуги"
+                      value={previewData.otherServicesPrice != null ? money.format(previewData.otherServicesPrice) : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Скидка"
+                      value={previewData.discount != null ? money.format(previewData.discount) : "—"}
+                    />
+                    <PreviewField
+                      icon={<IconCash size={16} />}
+                      label="Аванс"
+                      value={previewData.advance != null ? money.format(previewData.advance) : "—"}
+                    />
+                  </SimpleGrid>
+                ) : null}
+              </Tabs.Panel>
+              <Tabs.Panel value="comments" pt="md">
+                <OrderCommentsSection
+                  orderId={previewOrder.id}
+                  canEdit={canMove}
+                  currentUserId={me.data?.user.id}
+                  isAdmin={me.data?.user.role === "ADMIN"}
+                />
+              </Tabs.Panel>
+              <Tabs.Panel value="facades" pt="md">
+                {previewOrderDetails.isPending ? <Text c="dimmed">Загрузка…</Text> : null}
+                {previewOrderDetails.data?.order ? (
+                  <ScrollArea type="auto" offsetScrollbars>
+                    <Table striped highlightOnHover withTableBorder miw={900}>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>#</Table.Th>
+                          <Table.Th>Размеры</Table.Th>
+                          <Table.Th>Кол-во</Table.Th>
+                          <Table.Th>Толщина</Table.Th>
+                          <Table.Th>Фрезеровка</Table.Th>
+                          <Table.Th>Покрытие</Table.Th>
+                          <Table.Th>Ручка</Table.Th>
+                          <Table.Th>Цвет</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {previewOrderDetails.data.order.facades.map((f, i) => (
+                          <Table.Tr key={f.id}>
+                            <Table.Td>{i + 1}</Table.Td>
+                            <Table.Td>{f.widthMm} × {f.heightMm} мм</Table.Td>
+                            <Table.Td>{f.quantity} шт.</Table.Td>
+                            <Table.Td>{f.thicknessMm} мм</Table.Td>
+                            <Table.Td>{f.millingLabel || "—"}</Table.Td>
+                            <Table.Td>{f.coatingType.name}</Table.Td>
+                            <Table.Td>{f.handleLabel?.trim() ? f.handleLabel : "—"}</Table.Td>
+                            <Table.Td>{f.color || "—"}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                ) : null}
+              </Tabs.Panel>
+              <Tabs.Panel value="time" pt="md">
+                {canMove ? (
+                  <Group justify="flex-end" mb="sm">
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onClick={() => {
+                        setQuickAddTab("time");
+                        setQuickAddOrder(previewOrder);
+                      }}
+                    >
+                      Добавить трудозатрату
+                    </Button>
+                  </Group>
+                ) : null}
+                <OrderTimeEntriesSection orderId={previewOrder.id} canEdit={canMove} showCreateForm={false} />
+              </Tabs.Panel>
+              <Tabs.Panel value="materials" pt="md">
+                {canMove ? (
+                  <Group justify="flex-end" mb="sm">
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onClick={() => {
+                        setQuickAddTab("material");
+                        setQuickAddOrder(previewOrder);
+                      }}
+                    >
+                      Добавить материал
+                    </Button>
+                  </Group>
+                ) : null}
+                <OrderMaterialEntriesSection orderId={previewOrder.id} canEdit={canMove} showCreateForm={false} />
+              </Tabs.Panel>
+            </Tabs>
 
             <Group justify="flex-end">
-              {canMove ? (
-                <Button
-                  variant="light"
-                  onClick={() => {
-                    setQuickAddOrder(previewOrder);
-                  }}
-                >
-                  Добавить запись
-                </Button>
-              ) : null}
               <Button variant="default" onClick={() => setPreviewOrder(null)}>
                 Закрыть
               </Button>
@@ -395,6 +510,7 @@ export function OrdersBoardPage() {
       <OrderQuickAddModal
         order={quickAddOrder ? { id: quickAddOrder.id, orderNumberFormatted: quickAddOrder.orderNumberFormatted } : null}
         opened={!!quickAddOrder}
+        initialTab={quickAddTab}
         onClose={() => setQuickAddOrder(null)}
       />
     </>
